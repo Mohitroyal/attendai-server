@@ -11,6 +11,9 @@ import io
 import os
 import threading
 import time
+from datetime import datetime
+
+updated_at = datetime.now()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'attendance_secret_key_2024')
@@ -23,10 +26,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
-app.config['MYSQL_HOST'] = os.environ.get('MYSQL_HOST', 'localhost')
-app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'root')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', 'Mohith@123')
-app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'attendance_system')
+app.config['MYSQL_HOST']     = os.environ.get('MYSQLHOST',     'localhost')
+app.config['MYSQL_USER']     = os.environ.get('MYSQLUSER',     'root')
+app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'Mohith@123')
+app.config['MYSQL_DB']       = os.environ.get('MYSQLDATABASE', 'attendance_system')
+app.config['MYSQL_PORT']     = int(os.environ.get('MYSQLPORT', 3306))
 
 mysql = MySQL(app)
 
@@ -1348,4 +1352,5 @@ def powerbi_export():
     return response
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
