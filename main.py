@@ -1,13 +1,5 @@
 from flask import Flask, render_template, Response, request, redirect, session, jsonify, make_response
 from flask_mysqldb import MySQL
-try:
-    import tensorflow as tf
-    import cv2
-    from ultralytics import YOLO
-    import serial
-    CAMERA_AVAILABLE = True
-except ImportError:
-    CAMERA_AVAILABLE = False
 import numpy as np
 import datetime
 from datetime import timedelta
@@ -18,6 +10,16 @@ import os
 import threading
 import time
 from datetime import datetime
+
+# ── CAMERA / ML IMPORTS (only on local machine with camera) ──────────────────
+try:
+    import cv2
+    import tensorflow as tf
+    CAMERA_AVAILABLE = True
+except ImportError:
+    CAMERA_AVAILABLE = False
+    cv2 = None
+    tf = None
 
 updated_at = datetime.now()
 
@@ -40,27 +42,45 @@ app.config['MYSQL_PORT']     = int(os.environ.get('MYSQLPORT', 3306))
 
 mysql = MySQL(app)
 
-model = tf.keras.models.load_model("model/face_model4.keras")
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+# ── LOAD MODEL (only if TF available and model file exists) ──────────────────
+model = None
+face_cascade = None
+if CAMERA_AVAILABLE and os.path.exists("model/face_model4.keras"):
+    try:
+        model = tf.keras.models.load_model("model/face_model4.keras")
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
+        print("✅ Model loaded")
+    except Exception as e:
+        print(f"⚠️ Model load failed: {e}")
+        CAMERA_AVAILABLE = False
+else:
+    print("⚠️ Model not found or CV2 unavailable — face recognition disabled")
+    CAMERA_AVAILABLE = False
 
 labels = ["DIVYADHAR", "Mohith", "Uday"]
 
 DEPARTMENTS = ['Development', 'HR', 'Design', 'Operations', 'Marketing', 'Research', 'Cybersecurity']
 
+# ── CAMERA INIT (only if CV2 available) ──────────────────────────────────────
 camera = None
-for idx in [0, 1, 2]:
-    cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-    if cap.isOpened():
-        ret, frame = cap.read()
-        if ret and frame is not None:
-            camera = cap
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            print(f"✅ Camera found at index {idx}")
-            break
-        cap.release()
+if CAMERA_AVAILABLE:
+    try:
+        for idx in [0, 1, 2]:
+            cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    camera = cap
+                    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    print(f"✅ Camera found at index {idx}")
+                    break
+                cap.release()
+    except Exception as e:
+        print(f"⚠️ Camera init failed: {e}")
+        camera = None
 
 if camera is None:
     print("⚠️ No camera found — scanner disabled")
@@ -116,7 +136,7 @@ def get_admin_department():
     return session.get('admin_department', None)
 
 
-# ── CAMERA ────────────────────────────────────────────────────────────────────
+# ── CAMERA FRAMES ─────────────────────────────────────────────────────────────
 def frames():
     global last_frame
     last_detect_time = 0
@@ -228,7 +248,6 @@ def superadmin_dashboard():
     today = datetime.date.today()
     week = today.isocalendar()[1]
 
-    # Company-wide stats
     cur.execute("SELECT COUNT(*) FROM employees")
     total_employees = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM attendance WHERE date=%s", (today,))
@@ -240,7 +259,6 @@ def superadmin_dashboard():
     cur.execute("SELECT COUNT(*) FROM tasks WHERE status='proof_submitted' AND admin_verdict='pending'")
     pending_proofs = cur.fetchone()[0]
 
-    # Department-wise stats
     cur.execute("""
         SELECT e.department, COUNT(e.id) as emp_count,
                COUNT(a.id) as present_today
@@ -251,7 +269,6 @@ def superadmin_dashboard():
     """, (today,))
     dept_stats = cur.fetchall()
 
-    # All tasks with employee + dept info (including dept-only tasks from super admin)
     cur.execute("""
         SELECT t.id, t.title, t.description, t.priority, t.status,
                t.due_date, t.created_at,
@@ -265,7 +282,6 @@ def superadmin_dashboard():
     all_tasks = cur.fetchall()
     tasks_clean = [(t[0],t[1],t[2],t[3],t[4],to_str(t[5]),to_str(t[6]),t[7],t[8],to_str(t[9]),t[10],t[11],t[12]) for t in all_tasks]
 
-    # All attendance today
     cur.execute("""
         SELECT a.name, a.checkin, a.checkout, e.department
         FROM attendance a
@@ -274,11 +290,9 @@ def superadmin_dashboard():
     """, (today,))
     today_attendance = cur.fetchall()
 
-    # All dept admins
     cur.execute("SELECT id, username, department, email FROM admin ORDER BY department")
     dept_admins = cur.fetchall()
 
-    # All employees
     cur.execute("SELECT id, name, email, department FROM employees ORDER BY department, name")
     all_employees = cur.fetchall()
 
@@ -307,8 +321,8 @@ def superadmin_tasks_add():
     data = request.get_json()
     title = data.get('title', '').strip()
     desc = data.get('desc', '').strip()
-    emp_id = data.get('emp_id') or None      # optional
-    dept = data.get('dept', '').strip()       # required
+    emp_id = data.get('emp_id') or None
+    dept = data.get('dept', '').strip()
     priority = data.get('priority', 'medium')
     due = data.get('due') or None
     if not title or not dept:
@@ -439,13 +453,14 @@ def superadmin_logout():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ADMIN ROUTES (dept-scoped)
+# ADMIN ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/video')
-def video_feed():
-    if not CAMERA_AVAILABLE:
-        return "Camera not available", 503
+def video():
+    if not admin_required(): return "Unauthorized", 401
+    if not CAMERA_AVAILABLE or camera is None:
+        return "Camera not available on server", 503
     return Response(frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/prediction')
@@ -551,7 +566,6 @@ def dashboard():
     week = today.isocalendar()[1]
     dept = get_admin_department()
 
-    # Scoped to department
     if dept:
         cur.execute("SELECT COUNT(*) FROM employees WHERE department=%s", (dept,))
         total_employees = cur.fetchone()[0]
@@ -706,7 +720,6 @@ def admin_tasks():
                 (" AND e.department=%s" if dept else ""), (dept,) if dept else ())
     pending_proofs = cur.fetchone()[0]
 
-    # Tasks from Super Admin assigned to this dept but not yet assigned to an employee
     if dept:
         cur.execute("""
             SELECT t.id, t.title, t.description, t.assigned_to, t.assigned_by,
@@ -727,11 +740,10 @@ def admin_tasks():
         """)
     sa_tasks_raw = cur.fetchall()
 
-    # Super admin tasks with employee name if assigned
     sa_tasks = []
     for t in sa_tasks_raw:
         emp_name = None
-        if t[3]:  # assigned_to exists
+        if t[3]:
             cur.execute("SELECT name FROM employees WHERE id=%s", (t[3],))
             row = cur.fetchone()
             emp_name = row[0] if row else None
@@ -763,7 +775,6 @@ def admin_assign_sa_task():
     mysql.connection.commit()
     cur.close()
     return jsonify({'status': 'ok'})
-
 
 @app.route('/admin/tasks/add', methods=['POST'])
 def admin_tasks_add():
@@ -807,7 +818,6 @@ def admin_tasks_verdict():
     new_status = 'completed' if verdict == 'approved' else 'in_progress'
     cur.execute("UPDATE tasks SET admin_verdict=%s, admin_note=%s, status=%s WHERE id=%s",
                 (verdict, note, new_status, task_id))
-    # Find who the task belongs to
     cur.execute("SELECT assigned_to, title FROM tasks WHERE id=%s", (task_id,))
     task = cur.fetchone()
     mysql.connection.commit()
@@ -972,7 +982,6 @@ def employee_task_decline():
     update_performance(session['employee_id'], 'task_declined', f'Declined task #{task_id}: {reason[:60]}')
     return jsonify({'status': 'ok'})
 
-
 @app.route('/employee/task/update', methods=['POST'])
 def employee_task_update():
     if not employee_required(): return jsonify({'error': 'unauthorized'}), 401
@@ -1034,8 +1043,6 @@ def employee_logout():
     session.pop('employee_id', None)
     session.pop('employee_name', None)
     return redirect('/employee/login')
-
-
 
 
 # ════════════════════════════════════════════════════════════════
@@ -1124,11 +1131,9 @@ def employee_id_by_name():
 
 @app.route('/api/charts/employee/<int:emp_id>')
 def charts_employee(emp_id):
-    # Allow superadmin and admin to view any employee's charts
     if 'employee_id' not in session and 'superadmin' not in session and 'admin' not in session:
         return jsonify({'error': 'unauthorized'}), 401
     cur = mysql.connection.cursor()
-    # Determine employee name from session or from DB by ID
     if 'employee_id' in session and session.get('employee_id') == emp_id:
         emp_name = session.get('employee_name', '')
     else:
@@ -1142,7 +1147,7 @@ def charts_employee(emp_id):
     """, (emp_name,))
     att_rows = cur.fetchall()
     att_dates = [str(r[0]) for r in reversed(att_rows)]
-    # Derive hours from checkin/checkout if available, else 0
+
     def calc_hours(cin, cout):
         try:
             if cin and cout:
@@ -1153,8 +1158,7 @@ def charts_employee(emp_id):
         except:
             pass
         return 0
-    att_hours = [calc_hours(r[1], r[2]) for r in reversed(att_rows)]
-    # Determine late: checkin after 09:15
+
     def is_late(cin):
         try:
             if cin:
@@ -1163,7 +1167,9 @@ def charts_employee(emp_id):
         except:
             pass
         return 0
-    att_late = [is_late(r[1]) for r in reversed(att_rows)]
+
+    att_hours = [calc_hours(r[1], r[2]) for r in reversed(att_rows)]
+    att_late  = [is_late(r[1]) for r in reversed(att_rows)]
 
     cur.execute(
         "SELECT DATE_FORMAT(date, '%%Y-%%m') as month, COUNT(*) as days "
@@ -1224,7 +1230,6 @@ def charts_admin():
         return jsonify({'error': 'unauthorized'}), 401
     dept  = session.get('admin_department', None)
     cur   = mysql.connection.cursor()
-    today = datetime.date.today()
 
     if dept:
         cur.execute("""
@@ -1233,7 +1238,7 @@ def charts_admin():
         """, (dept,))
     else:
         cur.execute("SELECT employee_name, score, days_present, days_late FROM performance_scores ORDER BY score DESC")
-    perf_rows  = cur.fetchall()
+    perf_rows = cur.fetchall()
 
     if dept:
         cur.execute(
@@ -1253,8 +1258,8 @@ def charts_admin():
     else:
         cur.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
     task_rows = cur.fetchall()
-
     cur.close()
+
     return jsonify({
         'employees': {
             'names':   [r[0] for r in perf_rows],
@@ -1356,6 +1361,7 @@ def powerbi_export():
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = 'attachment; filename=powerbi_data.csv'
     return response
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
