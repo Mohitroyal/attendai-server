@@ -4,8 +4,9 @@ import cv2
 try:
     import tensorflow as tf
 except:
-    tf = Noneimport numpy as np
-import datetime
+tf = None
+
+import numpy as npimport datetime
 from datetime import timedelta
 import calendar
 import csv
@@ -39,7 +40,9 @@ mysql = MySQL(app)
 if tf:
     model = tf.keras.models.load_model("model/face_model4.keras")
 else:
-    model = Noneface_cascade = cv2.CascadeClassifier(
+   model = None
+
+face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
@@ -47,7 +50,7 @@ labels = ["DIVYADHAR", "Mohith", "Uday"]
 
 DEPARTMENTS = ['Development', 'HR', 'Design', 'Operations', 'Marketing', 'Research', 'Cybersecurity']
 
-camera = camera = None
+camera = None
 print("Camera disabled on server")
 
 latest_prediction = {"name": None, "conf": 0.0, "waiting": False, "paused": False}
@@ -136,7 +139,7 @@ def frames():
             roi = frame[y:y+h, x:x+w]
             img_r = cv2.resize(roi, (128,128)) / 255.0
             img_r = np.reshape(img_r, (1,128,128,3))
-            if model:
+           if model:
     pred = model.predict(img_r)
 else:
     continue
