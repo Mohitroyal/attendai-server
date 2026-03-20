@@ -1,8 +1,8 @@
-flask==2.3.3
-flask-mysqldb==1.0.1
-Werkzeug==2.3.7
-requests==2.31.0
-numpy==1.24.3
-Pillow==10.0.0
+flask
+flask-mysqldb
+Werkzeug
+requests
+numpy
+Pillow
+tensorflow-cpu
 opencv-python-headless
-gunicorn
