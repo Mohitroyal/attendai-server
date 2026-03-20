@@ -1,8 +1,10 @@
 from flask import Flask, render_template, Response, request, redirect, session, jsonify, make_response
 from flask_mysqldb import MySQL
 import cv2
-import tensorflow as tf
-import numpy as np
+try:
+    import tensorflow as tf
+except:
+    tf = Noneimport numpy as np
 import datetime
 from datetime import timedelta
 import calendar
@@ -34,8 +36,10 @@ app.config['MYSQL_PORT']     = int(os.environ.get('MYSQLPORT', 3306))
 
 mysql = MySQL(app)
 
-model = tf.keras.models.load_model("model/face_model4.keras")
-face_cascade = cv2.CascadeClassifier(
+if tf:
+    model = tf.keras.models.load_model("model/face_model4.keras")
+else:
+    model = Noneface_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
@@ -43,21 +47,8 @@ labels = ["DIVYADHAR", "Mohith", "Uday"]
 
 DEPARTMENTS = ['Development', 'HR', 'Design', 'Operations', 'Marketing', 'Research', 'Cybersecurity']
 
-camera = None
-for idx in [0, 1, 2]:
-    cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-    if cap.isOpened():
-        ret, frame = cap.read()
-        if ret and frame is not None:
-            camera = cap
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            print(f"✅ Camera found at index {idx}")
-            break
-        cap.release()
-
-if camera is None:
-    print("⚠️ No camera found — scanner disabled")
+camera = camera = None
+print("Camera disabled on server")
 
 latest_prediction = {"name": None, "conf": 0.0, "waiting": False, "paused": False}
 prediction_lock = threading.Lock()
@@ -145,7 +136,10 @@ def frames():
             roi = frame[y:y+h, x:x+w]
             img_r = cv2.resize(roi, (128,128)) / 255.0
             img_r = np.reshape(img_r, (1,128,128,3))
-            pred = model.predict(img_r, verbose=0)
+            if model:
+    pred = model.predict(img_r)
+else:
+    continue
             label_idx = int(np.argmax(pred))
             conf = float(np.max(pred))
 
