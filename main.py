@@ -7,7 +7,8 @@ try:
     import serial
     CAMERA_AVAILABLE = True
 except ImportError:
-    CAMERA_AVAILABLE = Falseimport numpy as np
+    CAMERA_AVAILABLE = False
+import numpy as np
 import datetime
 from datetime import timedelta
 import calendar
