@@ -1,5 +1,5 @@
 from flask import Flask, render_template, Response, request, redirect, session, jsonify, make_response
-from flask_mysqldb import MySQL
+import pymysql
 import cv2
 import tensorflow as tf
 import numpy as np
@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 
 updated_at = datetime.now()
+pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'attendance_secret_key_2024')
