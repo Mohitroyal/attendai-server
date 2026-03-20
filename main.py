@@ -1,8 +1,13 @@
 from flask import Flask, render_template, Response, request, redirect, session, jsonify, make_response
 from flask_mysqldb import MySQL
-import cv2
-import tensorflow as tf
-import numpy as np
+try:
+    import tensorflow as tf
+    import cv2
+    from ultralytics import YOLO
+    import serial
+    CAMERA_AVAILABLE = True
+except ImportError:
+    CAMERA_AVAILABLE = Falseimport numpy as np
 import datetime
 from datetime import timedelta
 import calendar
@@ -437,9 +442,9 @@ def superadmin_logout():
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/video')
-def video():
-    if not admin_required(): return "Unauthorized", 401
-    if camera is None: return "No camera available", 503
+def video_feed():
+    if not CAMERA_AVAILABLE:
+        return "Camera not available", 503
     return Response(frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/prediction')
