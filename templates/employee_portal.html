@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Portal — AttendAI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f0f4ff; --card: #ffffff; --border: #e2e8f0;
+    --accent: #4f46e5; --accent2: #06b6d4;
+    --text: #1e293b; --muted: #94a3b8;
+    --success: #10b981; --warn: #f59e0b; --error: #ef4444;
+    --sidebar: #1e1b4b;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--sidebar); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+  .sidebar-logo { padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px; }
+  .logo-row { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 38px; height: 38px; background: linear-gradient(135deg,#4f46e5,#06b6d4); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 18px; height: 18px; color: white; }
+  .logo-text h1 { font-size: 15px; font-weight: 700; color: #fff; }
+  .logo-text p { font-size: 10px; color: rgba(255,255,255,0.4); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+  .nav-section { padding: 0 12px; flex: 1; }
+  .nav-label { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 2px; text-transform: uppercase; padding: 0 8px; margin: 16px 0 6px; font-family: 'DM Mono', monospace; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 500; text-decoration: none; border: none; background: none; width: 100%; transition: all 0.15s; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+  .nav-item.active { background: rgba(79,70,229,0.3); color: #a5b4fc; }
+  .nav-item.danger:hover { background: rgba(239,68,68,0.1); color: #fca5a5; }
+  .sidebar-footer { padding: 16px 12px 0; border-top: 1px solid rgba(255,255,255,0.08); margin-top: auto; }
+  .emp-badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(79,70,229,0.2); border-radius: 10px; }
+  .emp-avatar { width: 32px; height: 32px; background: linear-gradient(135deg,#4f46e5,#06b6d4); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; }
+  .emp-info h4 { font-size: 12px; font-weight: 600; color: #fff; }
+  .emp-info p { font-size: 10px; color: rgba(255,255,255,0.4); font-family: 'DM Mono', monospace; }
+
+  .main { margin-left: 240px; padding: 32px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title h2 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.4px; }
+  .page-title p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 24px; width: fit-content; }
+  .tab { padding: 8px 20px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(79,70,229,0.3); }
+  .tab:hover:not(.active) { color: var(--text); background: var(--bg); }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: box-shadow 0.2s; }
+  .stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-color: #c7d2fe; }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-value.blue { color: var(--accent); }
+  .stat-value.green { color: var(--success); }
+  .stat-value.yellow { color: var(--warn); }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .card { background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .card-header h3 { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .card-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 16px; text-align: left; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8faff; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-purple { background: #ede9fe; color: #5b21b6; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+  .badge-orange { background: #fff7ed; color: #c2410c; }
+  .badge-cyan { background: #ecfeff; color: #0e7490; }
+
+  /* Task cards */
+  .task-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
+  .task-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 16px; transition: all 0.2s; position: relative; overflow: hidden; }
+  .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .task-card.high::before { background: var(--error); }
+  .task-card.medium::before { background: var(--warn); }
+  .task-card.low::before { background: var(--success); }
+  .task-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-color: #c7d2fe; }
+  .task-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .task-desc { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 12px; background: rgba(0,0,0,0.03); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 8px 8px 0; white-space: pre-wrap; }
+  .task-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .task-due { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .task-due svg { width: 12px; height: 12px; }
+  .task-due.overdue { color: var(--error); }
+
+  .task-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .ts-btn { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--muted); transition: all 0.15s; }
+  .ts-btn:hover { border-color: var(--accent); color: var(--accent); background: #eef2ff; }
+  .ts-btn.active-status { background: var(--accent); color: white; border-color: var(--accent); }
+  .ts-btn.accept-btn { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+  .ts-btn.accept-btn:hover { background: var(--success); color: white; border-color: var(--success); }
+  .ts-btn.proof-btn { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .ts-btn.proof-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* Proof section on task card */
+  .proof-status { margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 12px; }
+  .proof-status.waiting { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .proof-status.approved { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+  .proof-status.rejected { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+  /* Proof modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 20px; padding: 28px; width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto; animation: modalIn 0.25s ease; }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  .modal h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .modal p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-field { margin-bottom: 16px; }
+  .modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .modal-field input, .modal-field textarea {
+    width: 100%; background: #f8fafc; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent); background: white; }
+  .modal-field textarea { resize: vertical; min-height: 80px; }
+  .file-upload-area {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 20px;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+  }
+  .file-upload-area:hover { border-color: var(--accent); background: #eef2ff; }
+  .file-upload-area p { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .file-upload-area svg { width: 28px; height: 28px; color: var(--muted); }
+  .file-name { font-size: 12px; color: var(--accent); margin-top: 6px; font-weight: 600; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel { flex: 1; padding: 11px; border: 1.5px solid var(--border); border-radius: 10px; background: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--error); color: var(--error); }
+  .btn-submit-proof { flex: 2; padding: 11px; background: linear-gradient(135deg,#4f46e5,#06b6d4); border: none; border-radius: 10px; color: white; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-submit-proof:hover { opacity: 0.9; }
+  .divider-or { text-align: center; color: var(--muted); font-size: 11px; margin: 12px 0; position: relative; }
+  .divider-or::before, .divider-or::after { content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: var(--border); }
+  .divider-or::before { left: 0; } .divider-or::after { right: 0; }
+
+  .log-form { padding: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .form-field input, .form-field textarea {
+    width: 100%; background: #f8fafc; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-field input:focus, .form-field textarea:focus { border-color: var(--accent); background: white; }
+  .form-field textarea { resize: vertical; min-height: 90px; }
+  .btn-submit { display: inline-flex; align-items: center; gap: 8px; padding: 11px 24px; background: linear-gradient(135deg,#4f46e5,#06b6d4); border: none; border-radius: 10px; color: white; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-submit:hover { opacity: 0.9; }
+  .btn-submit svg { width: 15px; height: 15px; }
+
+  .log-entry-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .log-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .log-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .log-hours { font-size: 12px; font-weight: 600; color: var(--accent); }
+  .log-content { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 22px; font-size: 13px; font-weight: 600; color: var(--text); z-index: 9999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s; opacity: 0; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast svg { width: 16px; height: 16px; }
+
+  .cal-strip { display: flex; gap: 6px; flex-wrap: wrap; padding: 16px 20px; }
+  .cal-day { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .cal-day.present { background: #d1fae5; color: #065f46; }
+  .cal-day.absent { background: #fee2e2; color: #991b1b; }
+  .cal-day.future { background: #f1f5f9; color: #cbd5e1; }
+  .cal-day.today { background: var(--accent); color: white; }
+  .cal-day-label { font-size: 9px; font-family: 'DM Mono',monospace; text-align: center; margin-bottom: 2px; color: var(--muted); }
+
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+  .empty-state svg { width: 40px; height: 40px; margin-bottom: 10px; opacity: 0.3; }
+
+  @media (max-width: 1024px) { .stats-row { grid-template-columns: 1fr 1fr; } .task-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { .sidebar { width: 60px; } .sidebar .logo-text, .sidebar span, .emp-info, .nav-label { display: none; } .nav-item { justify-content: center; } .main { margin-left: 60px; padding: 20px; } .form-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="toastIcon">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+  </svg>
+  <span id="toastMsg">Saved!</span>
+</div>
+
+<!-- PROOF SUBMISSION MODAL -->
+<div class="modal-overlay" id="proofModal">
+  <div class="modal">
+    <h3>📎 Submit Proof</h3>
+    <p id="proofModalTask">Submitting proof for task</p>
+    <input type="hidden" id="proofTaskId">
+
+    <div class="modal-field">
+      <label>Description / Notes</label>
+      <textarea id="proofText" placeholder="Describe what you did, any notes for the admin..."></textarea>
+    </div>
+
+    <div class="divider-or">or add link</div>
+
+    <div class="modal-field">
+      <label>Reference Link (GitHub, Drive, Jira, etc.)</label>
+      <input type="url" id="proofLink" placeholder="https://...">
+    </div>
+
+    <div class="divider-or">or upload image</div>
+
+    <div class="modal-field">
+      <label>Screenshot / Document</label>
+      <div class="file-upload-area" onclick="document.getElementById('proofFile').click()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p>Click to upload image or PDF (max 10MB)</p>
+        <div class="file-name" id="fileNameDisplay"></div>
+      </div>
+      <input type="file" id="proofFile" accept="image/*,.pdf" style="display:none" onchange="showFileName(this)">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeProofModal()">Cancel</button>
+      <button class="btn-submit-proof" onclick="submitProof()">Submit Proof →</button>
+    </div>
+  </div>
+</div>
+
+<!-- DECLINE TASK MODAL -->
+<div class="modal-overlay" id="declineModal">
+  <div class="modal">
+    <h3 style="color:#ef4444">✗ Decline Task</h3>
+    <p id="declineModalTask" style="color:var(--muted);font-size:13px;margin-bottom:16px"></p>
+    <input type="hidden" id="declineTaskId">
+    <div class="modal-field">
+      <label>Reason for Declining <span style="color:#ef4444">*</span></label>
+      <textarea id="declineReason" placeholder="Explain why you are declining this task (e.g. already overloaded, not my area, need clarification)..." style="min-height:100px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDeclineModal()">Cancel</button>
+      <button onclick="submitDecline()" style="padding:10px 20px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#ef4444;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Decline Task →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-mark">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+      <div class="logo-text"><h1>AttendAI</h1><p>Employee Portal</p></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Portal</div>
+    <button class="nav-item active" onclick="showTab('attendance', this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      <span>Attendance</span>
+    </button>
+    <button class="nav-item" onclick="showTab('tasks', this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <span>My Tasks</span>
+      {% if pending_tasks > 0 %}
+      <span style="margin-left:auto;background:#ef4444;color:white;border-radius:100px;font-size:10px;padding:2px 7px;font-weight:700">{{ pending_tasks }}</span>
+      {% endif %}
+    </button>
+    <button class="nav-item" onclick="showTab('worklog', this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      <span>Work Log</span>
+    </button>
+    <button class="nav-item" onclick="showTab('performance', this)">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span>My Performance</span>
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="emp-badge">
+      <div class="emp-avatar">{{ employee.name[0] }}</div>
+      <div class="emp-info">
+        <h4>{{ employee.name }}</h4>
+        <p>{{ employee.company_id }}</p>
+      </div>
+    </div>
+    <a href="/employee/logout" class="nav-item danger" style="margin-top:10px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      <span>Logout</span>
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">
+      <h2>Welcome back, {{ employee.name }} 👋</h2>
+      <p id="dateTime">Loading...</p>
+    </div>
+    <div style="background:white;border:1px solid var(--border);border-radius:100px;padding:8px 16px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)"></div>
+      {{ employee.department }}
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-attendance" onclick="showTab('attendance', this)">📋 Attendance</button>
+    <button class="tab" id="tab-tasks" onclick="showTab('tasks', this)">✅ Tasks {% if pending_tasks > 0 %}({{ pending_tasks }}){% endif %}</button>
+    <button class="tab" id="tab-worklog" onclick="showTab('worklog', this)">📝 Work Log</button>
+    <button class="tab" id="tab-performance" onclick="showTab('performance', this)">📊 My Performance</button>
+  </div>
+
+  <!-- ══ ATTENDANCE ══ -->
+  <div class="section active" id="section-attendance">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value blue">{{ attendance_stats.month_days }}</div><div class="stat-sub">days present</div></div>
+      <div class="stat-card"><div class="stat-label">This Week</div><div class="stat-value green">{{ attendance_stats.week_days }}</div><div class="stat-sub">days this week</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Check-in</div><div class="stat-value yellow">{{ attendance_stats.avg_checkin or '—' }}</div><div class="stat-sub">this month</div></div>
+      <div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-value">{{ attendance_stats.total }}</div><div class="stat-sub">all time</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>This Month — {{ current_month }}</h3>
+      </div>
+      <div class="cal-strip">
+        {% for day in calendar_days %}
+        <div><div class="cal-day-label">{{ day.dow }}</div><div class="cal-day {{ day.status }}" title="{{ day.date }}">{{ day.day }}</div></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>Attendance History</h3><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">{{ attendance_records|length }} records</span></div>
+      {% if attendance_records %}
+      <table>
+        <thead><tr><th>Date</th><th>Week</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for row in attendance_records %}
+          <tr>
+            <td style="font-family:'DM Mono',monospace;font-size:12px">{{ row[2] }}</td>
+            <td><span class="badge badge-purple">W{{ row[3] }}</span></td>
+            <td style="color:var(--success);font-family:'DM Mono',monospace;font-size:12px">{{ row[4] or '—' }}</td>
+            <td style="color:var(--warn);font-family:'DM Mono',monospace;font-size:12px">{{ row[5] or '—' }}</td>
+            <td>{% if row[5] %}<span class="badge badge-green">✓ Complete</span>{% else %}<span class="badge badge-yellow">● Present</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>No attendance records yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══ TASKS ══ -->
+  <div class="section" id="section-tasks">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Tasks</div><div class="stat-value blue">{{ task_stats.total }}</div><div class="stat-sub">assigned to you</div></div>
+      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value yellow">{{ task_stats.pending }}</div><div class="stat-sub">not started</div></div>
+      <div class="stat-card"><div class="stat-label">In Progress</div><div class="stat-value blue">{{ task_stats.in_progress }}</div><div class="stat-sub">working on</div></div>
+      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value green">{{ task_stats.completed }}</div><div class="stat-sub">done</div></div>
+    </div>
+
+    {% if tasks %}
+    <div class="card">
+      <div class="card-header">
+        <h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Assigned Tasks</h3>
+        <div style="display:flex;gap:6px">
+          <button onclick="filterTasks('all')" class="ts-btn active-status" id="filter-all">All</button>
+          <button onclick="filterTasks('pending')" class="ts-btn" id="filter-pending">Pending</button>
+          <button onclick="filterTasks('in_progress')" class="ts-btn" id="filter-in_progress">In Progress</button>
+          <button onclick="filterTasks('completed')" class="ts-btn" id="filter-completed">Completed</button>
+        </div>
+      </div>
+      <div class="task-grid" id="taskGrid">
+        {% for task in tasks %}
+        {# task: 0=id,1=title,2=desc,3=assigned_to,4=assigned_by,5=priority,6=status,7=due,8=created,9=proof_text,10=proof_link,11=proof_image,12=proof_at,13=verdict,14=note #}
+        <div class="task-card {{ task[5] }}" data-status="{{ task[6] }}" id="task-{{ task[0] }}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              {% if task[5] == 'high' %}<span class="badge badge-red">🔴 High</span>
+              {% elif task[5] == 'medium' %}<span class="badge badge-yellow">🟡 Medium</span>
+              {% else %}<span class="badge badge-green">🟢 Low</span>{% endif %}
+
+              {% if task[6] == 'completed' %}<span class="badge badge-green">✓ Done</span>
+              {% elif task[6] == 'proof_submitted' %}<span class="badge badge-orange">⏳ Awaiting Review</span>
+              {% elif task[6] == 'in_progress' %}<span class="badge badge-blue">⟳ In Progress</span>
+              {% elif task[6] == 'accepted' %}<span class="badge badge-cyan">✔ Accepted</span>
+              {% elif task[6] == 'rejected' %}<span class="badge badge-red">✗ Proof Rejected</span>
+              {% elif task[6] == 'declined' %}<span class="badge badge-red">✗ Declined</span>
+              {% else %}<span class="badge badge-gray">○ Pending</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="task-title">{{ task[1] }}</div>
+
+          <!-- Task description from admin -->
+          {% if task[2] %}
+          <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Task Description</div>
+          <div class="task-desc">{{ task[2] }}</div>
+          {% else %}
+          <div class="task-desc" style="color:var(--muted);font-style:italic">No description provided.</div>
+          {% endif %}
+
+          <!-- Admin feedback note — shown on completed/rejected -->
+          {% if task[6] == 'completed' and task[14] %}
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px">
+            <div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">✅ Admin Feedback</div>
+            <div style="color:#e2e8f0">{{ task[14] }}</div>
+          </div>
+          {% elif task[6] == 'rejected' and task[14] %}
+          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13px">
+            <div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">❌ Rejection Reason</div>
+            <div style="color:#e2e8f0">{{ task[14] }}</div>
+          </div>
+          {% endif %}
+
+          <div class="task-meta">
+            <div class="task-due {% if task[7] and task[7] < today %}overdue{% endif %}">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              {% if task[7] %}Due: {{ task[7] }}{% else %}No due date{% endif %}
+            </div>
+            <span style="font-size:11px;color:var(--muted)">by {{ task[4] or 'Admin' }}</span>
+          </div>
+
+          <!-- Action buttons based on status -->
+          <div class="task-actions">
+            {% if task[6] == 'pending' %}
+              <button class="ts-btn accept-btn" onclick="acceptTask({{ task[0] }})">✔ Accept Task</button>
+              <button class="ts-btn" onclick="openDeclineModal({{ task[0] }}, '{{ task[1]|replace("'","") }}')" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.25);margin-top:6px">✗ Decline Task</button>
+
+            {% elif task[6] == 'declined' %}
+              <div class="proof-status rejected">
+                ✗ You declined this task
+                {% if task[14] %}<div style="margin-top:6px;font-size:12px;opacity:0.85"><strong>Your reason:</strong> {{ task[14] }}</div>{% endif %}
+              </div>
+
+            {% elif task[6] == 'accepted' %}
+              <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#06b6d4">
+                ✔ Task accepted — click below when you start working
+              </div>
+              <button class="ts-btn active-status" onclick="updateTaskStatus({{ task[0] }}, 'in_progress')">▶ Start Working</button>
+
+            {% elif task[6] == 'in_progress' %}
+              <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#3b82f6">
+                ⟳ Currently in progress — submit proof when done
+              </div>
+              <button class="ts-btn proof-btn" onclick="openProofModal({{ task[0] }}, '{{ task[1]|replace("'","") }}')">📎 Submit Proof</button>
+
+            {% elif task[6] == 'proof_submitted' %}
+              <div class="proof-status waiting">
+                ⏳ Proof submitted — waiting for admin review
+                {% if task[12] %}<div style="font-size:11px;margin-top:4px;opacity:0.7">Submitted: {{ task[12] }}</div>{% endif %}
+              </div>
+
+            {% elif task[6] == 'completed' %}
+              <div class="proof-status approved">
+                ✅ Task Approved by Admin
+                {% if task[14] %}<div style="margin-top:6px;font-size:12px;opacity:0.9"><strong>Admin note:</strong> {{ task[14] }}</div>{% endif %}
+              </div>
+
+            {% elif task[6] == 'rejected' %}
+              <div class="proof-status rejected">
+                ❌ Proof Rejected
+                {% if task[14] %}<div style="margin-top:6px;font-size:12px;opacity:0.9"><strong>Reason:</strong> {{ task[14] }}</div>{% endif %}
+                <div style="margin-top:10px"><button class="ts-btn proof-btn" onclick="openProofModal({{ task[0] }}, '{{ task[1]|replace("'","") }}')">📎 Resubmit Proof</button></div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>No tasks assigned yet.</p></div></div>
+    {% endif %}
+  </div>
+
+  <!-- ══ WORK LOG ══ -->
+  <div class="section" id="section-worklog">
+    <div class="card">
+      <div class="card-header"><h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Submit Today's Work Log</h3></div>
+      <div class="log-form">
+        <div class="form-row">
+          <div class="form-field"><label>Date</label><input type="date" id="logDate" value="{{ today }}"></div>
+          <div class="form-field"><label>Hours Worked</label><input type="number" id="logHours" min="0.5" max="24" step="0.5" placeholder="e.g. 8"></div>
+        </div>
+        <div class="form-field" style="margin-bottom:16px"><label>What did you work on today?</label><textarea id="logWork" placeholder="Describe the tasks you completed..."></textarea></div>
+        <button class="btn-submit" onclick="submitWorkLog()"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Submit Work Log</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Past Work Logs</h3><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">{{ work_logs|length }} entries</span></div>
+      <div style="padding:16px">
+        {% if work_logs %}
+          {% for log in work_logs %}
+          <div class="log-entry-card"><div class="log-entry-header"><span class="log-date">{{ log[2] }}</span><span class="log-hours">{{ log[3] }}h worked</span></div><div class="log-content">{{ log[4] }}</div></div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg><p>No work logs yet.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- ══ PERFORMANCE ══ -->
+  <div class="section" id="section-performance">
+
+    <!-- Score + Grade header row -->
+    <div class="stats-row" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr;">
+      <div class="stat-card" style="background:linear-gradient(135deg,#eef2ff,#f0fdfa);border-color:#c7d2fe;position:relative;overflow:hidden">
+        <div id="ep-score-topbar" style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)"></div>
+        <div class="stat-label">Performance Score</div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-top:4px">
+          <div id="ep-score-val" class="stat-value blue" style="font-size:38px">—</div>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:6px">/100</div>
+          <div id="ep-grade-val" style="font-size:28px;font-weight:800;margin-bottom:2px;margin-left:auto">—</div>
+        </div>
+        <div style="margin-top:12px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+          <div id="ep-score-bar" style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width 0.7s ease"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:12px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
+          <span>A ≥ 90</span><span>B ≥ 75</span><span>C ≥ 60</span><span>D ≥ 40</span><span>F &lt; 40</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Days Present</div>
+        <div id="ep-present" class="stat-value green">—</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Late Arrivals</div>
+        <div id="ep-late" class="stat-value yellow">—</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tasks Done</div>
+        <div id="ep-done" class="stat-value blue">—</div>
+        <div class="stat-sub">completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Declined</div>
+        <div id="ep-declined" class="stat-value" style="color:var(--error)">—</div>
+        <div class="stat-sub">tasks</div>
+      </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Hours Worked — Last 30 Days
+          </h3>
+        </div>
+        <div style="padding:16px;position:relative;height:220px">
+          <canvas id="ep-hours-chart"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Monthly Attendance
+          </h3>
+        </div>
+        <div style="padding:16px;position:relative;height:220px">
+          <canvas id="ep-monthly-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Task Status Breakdown
+          </h3>
+        </div>
+        <div style="padding:16px;display:flex;align-items:center;justify-content:center;height:220px">
+          <canvas id="ep-task-chart" style="max-width:220px;max-height:220px"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            Score History
+          </h3>
+          <button onclick="loadEmpCharts()" style="padding:5px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;color:var(--accent);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;font-weight:600">↺ Refresh</button>
+        </div>
+        <div id="ep-log-list" style="max-height:220px;overflow-y:auto;padding:4px 0"></div>
+      </div>
+    </div>
+
+    <!-- Score Rules card -->
+    <div class="card">
+      <div class="card-header"><h3>⚡ How Your Score is Calculated</h3></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--success)">+20</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">Proof Approved</div><div style="font-size:11px;color:var(--muted)">Task proof accepted by admin</div></div>
+        </div>
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--success)">+2</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">On-time Arrival</div><div style="font-size:11px;color:var(--muted)">Checked in before 9:15 AM</div></div>
+        </div>
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--error)">-15</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">Proof Rejected</div><div style="font-size:11px;color:var(--muted)">Submitted proof was declined</div></div>
+        </div>
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--error)">-10</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">Task Declined</div><div style="font-size:11px;color:var(--muted)">Refused an assigned task</div></div>
+        </div>
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--warn)">-3</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">Late Arrival</div><div style="font-size:11px;color:var(--muted)">Checked in after 9:15 AM</div></div>
+        </div>
+        <div style="background:white;padding:14px 18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px;font-weight:800;color:var(--error)">-5</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text)">Absent Day</div><div style="font-size:11px;color:var(--muted)">No attendance record</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById('dateTime').textContent =
+    now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'}) +
+    ' — ' + now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'});
+}
+updateDateTime(); setInterval(updateDateTime, 1000);
+
+function showTab(tab, btn) {
+  ['attendance','tasks','worklog','performance'].forEach(function(t) {
+    var sec = document.getElementById('section-' + t);
+    var tb  = document.getElementById('tab-' + t);
+    if (sec) sec.classList.remove('active');
+    if (tb)  tb.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var sec = document.getElementById('section-' + tab);
+  var tb  = document.getElementById('tab-' + tab);
+  if (sec) sec.classList.add('active');
+  if (tb)  tb.classList.add('active');
+  if (btn) btn.classList.add('active');
+  // Load performance charts on first visit
+  if (tab === 'performance' && !window._perfLoaded) {
+    window._perfLoaded = true;
+    loadEmpCharts();
+  }
+}
+
+// Accept task
+function acceptTask(taskId) {
+  fetch('/employee/task/accept', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: taskId})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showToast('✔ Task accepted! Click "Start Working" when ready.');
+      setTimeout(() => location.reload(), 1200);
+    }
+  });
+}
+
+// Decline modal
+function openDeclineModal(taskId, taskTitle) {
+  document.getElementById('declineTaskId').value = taskId;
+  document.getElementById('declineModalTask').textContent = 'Task: ' + taskTitle;
+  document.getElementById('declineReason').value = '';
+  document.getElementById('declineModal').classList.add('show');
+}
+
+function closeDeclineModal() {
+  document.getElementById('declineModal').classList.remove('show');
+}
+
+function submitDecline() {
+  const taskId = document.getElementById('declineTaskId').value;
+  const reason = document.getElementById('declineReason').value.trim();
+  if (!reason) { showToast('Please write a reason for declining', 'error'); return; }
+  fetch('/employee/task/decline', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: taskId, reason})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      closeDeclineModal();
+      showToast('Task declined. Admin has been notified.');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      showToast(d.message || 'Error declining task', 'error');
+    }
+  });
+}
+
+// Update task status
+function updateTaskStatus(taskId, status) {
+  fetch('/employee/task/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: taskId, status})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showToast('Status updated!');
+      setTimeout(() => location.reload(), 1000);
+    }
+  });
+}
+
+// Proof modal
+function openProofModal(taskId, taskTitle) {
+  document.getElementById('proofTaskId').value = taskId;
+  document.getElementById('proofModalTask').textContent = 'Task: ' + taskTitle;
+  document.getElementById('proofText').value = '';
+  document.getElementById('proofLink').value = '';
+  document.getElementById('proofFile').value = '';
+  document.getElementById('fileNameDisplay').textContent = '';
+  document.getElementById('proofModal').classList.add('show');
+}
+
+function closeProofModal() {
+  document.getElementById('proofModal').classList.remove('show');
+}
+
+function showFileName(input) {
+  const name = input.files[0] ? input.files[0].name : '';
+  document.getElementById('fileNameDisplay').textContent = name ? '📎 ' + name : '';
+}
+
+function submitProof() {
+  const taskId = document.getElementById('proofTaskId').value;
+  const text = document.getElementById('proofText').value.trim();
+  const link = document.getElementById('proofLink').value.trim();
+  const fileInput = document.getElementById('proofFile');
+
+  if (!text && !link && (!fileInput.files || !fileInput.files[0])) {
+    showToast('Please provide at least one proof!', true);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('task_id', taskId);
+  formData.append('proof_text', text);
+  formData.append('proof_link', link);
+  if (fileInput.files[0]) {
+    formData.append('proof_image', fileInput.files[0]);
+  }
+
+  fetch('/employee/task/submit_proof', {method: 'POST', body: formData})
+    .then(r => r.json())
+    .then(d => {
+      if (d.status === 'ok') {
+        showToast('✅ Proof submitted! Admin will review it.');
+        closeProofModal();
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(d.message || 'Error submitting proof', true);
+      }
+    });
+}
+
+// Filter tasks
+function filterTasks(status) {
+  document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active-status'));
+  document.getElementById('filter-' + status).classList.add('active-status');
+  document.querySelectorAll('.task-card').forEach(card => {
+    const s = card.dataset.status;
+    const show = status === 'all'
+      || status === s
+      || (status === 'in_progress' && ['accepted','in_progress'].includes(s));
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+// Work log
+function submitWorkLog() {
+  const date = document.getElementById('logDate').value;
+  const hours = document.getElementById('logHours').value;
+  const work = document.getElementById('logWork').value.trim();
+  if (!date || !hours || !work) { showToast('Please fill all fields!', true); return; }
+  fetch('/employee/worklog/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({date, hours, work})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showToast('Work log submitted!');
+      document.getElementById('logWork').value = '';
+      document.getElementById('logHours').value = '';
+    } else {
+      showToast(d.message || 'Error', true);
+    }
+  });
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.style.borderColor = isError ? '#fca5a5' : '#a7f3d0';
+  document.getElementById('toastIcon').style.color = isError ? 'var(--error)' : 'var(--success)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Close modal on outside click
+document.getElementById('proofModal').addEventListener('click', function(e) {
+  if (e.target === this) closeProofModal();
+});
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#e2e8f0';
+Chart.defaults.font.family = 'DM Sans, sans-serif';
+
+var _epHours, _epMonthly, _epTask;
+
+function gradeColor(s) {
+  if (s >= 90) return '#10b981';
+  if (s >= 75) return '#4f46e5';
+  if (s >= 60) return '#f59e0b';
+  if (s >= 40) return '#f97316';
+  return '#ef4444';
+}
+
+async function loadEmpCharts() {
+  try {
+    var empId = {{ session.get('employee_id', 0) }};
+    var res = await fetch('/api/charts/employee/' + empId);
+    var data = await res.json();
+    if (data.error) return;
+
+    var p = data.performance;
+    var gc = gradeColor(p.score);
+
+    document.getElementById('ep-score-val').textContent = p.score;
+    document.getElementById('ep-score-val').style.color = gc;
+    document.getElementById('ep-grade-val').textContent = p.grade;
+    document.getElementById('ep-grade-val').style.color = gc;
+    document.getElementById('ep-score-bar').style.width = p.score + '%';
+    document.getElementById('ep-score-bar').style.background = gc;
+    document.getElementById('ep-score-topbar').style.background = gc;
+    document.getElementById('ep-present').textContent = p.days_present;
+    document.getElementById('ep-late').textContent = p.days_late;
+    document.getElementById('ep-done').textContent = p.tasks_completed;
+    document.getElementById('ep-declined').textContent = p.tasks_declined;
+
+    // Hours worked bar chart
+    if (_epHours) _epHours.destroy();
+    _epHours = new Chart(document.getElementById('ep-hours-chart'), {
+      type: 'bar',
+      data: {
+        labels: data.attendance.dates,
+        datasets: [{ label: 'Hours', data: data.attendance.hours,
+          backgroundColor: 'rgba(79,70,229,0.6)', borderColor: 'rgba(79,70,229,1)',
+          borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 } } },
+          y: { ticks: { callback: function(v){ return v+'h'; } } }
+        }
+      }
+    });
+
+    // Monthly attendance bar chart
+    if (_epMonthly) _epMonthly.destroy();
+    _epMonthly = new Chart(document.getElementById('ep-monthly-chart'), {
+      type: 'bar',
+      data: {
+        labels: data.attendance.monthly_labels,
+        datasets: [{ label: 'Days Present', data: data.attendance.monthly_days,
+          backgroundColor: 'rgba(16,185,129,0.6)', borderColor: 'rgba(16,185,129,1)',
+          borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+      }
+    });
+
+    // Task status donut
+    if (_epTask) _epTask.destroy();
+    var taskColorMap = {
+      'pending':'rgba(245,158,11,0.8)', 'accepted':'rgba(59,130,246,0.8)',
+      'in_progress':'rgba(139,92,246,0.8)', 'proof_submitted':'rgba(249,115,22,0.8)',
+      'completed':'rgba(16,185,129,0.8)', 'declined':'rgba(239,68,68,0.8)',
+      'rejected':'rgba(153,27,27,0.8)'
+    };
+    _epTask = new Chart(document.getElementById('ep-task-chart'), {
+      type: 'doughnut',
+      data: {
+        labels: data.tasks.labels,
+        datasets: [{ data: data.tasks.counts,
+          backgroundColor: data.tasks.labels.map(function(l){ return taskColorMap[l] || 'rgba(148,163,184,0.6)'; }),
+          borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }
+      }
+    });
+
+    // Score history log
+    var logEl = document.getElementById('ep-log-list');
+    if (!p.log || !p.log.length) {
+      logEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No activity recorded yet</div>';
+    } else {
+      logEl.innerHTML = p.log.map(function(l) {
+        var pos = l.points > 0;
+        var col = pos ? 'var(--success)' : 'var(--error)';
+        var bg  = pos ? '#d1fae5' : '#fee2e2';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #f1f5f9">'
+          + '<div style="background:' + bg + ';color:' + col + ';font-size:13px;font-weight:800;padding:4px 10px;border-radius:8px;min-width:48px;text-align:center;flex-shrink:0">'
+          + (pos?'+':'') + l.points + '</div>'
+          + '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">' + l.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);font-family:\'DM Mono\',monospace;margin-top:2px">' + l.date.substring(0,16) + '</div></div>'
+          + '</div>';
+      }).join('');
+    }
+
+  } catch(e) { console.error('Performance chart error:', e); }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  window._perfLoaded = false;
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!-- 
+  SAVE AS: templates/partials/employee_charts.html
+  Add ONE line to employee_portal.html where you want charts:
+  {% include 'partials/employee_charts.html' %}
+-->
+
+<div class="charts-section" style="margin-top:2rem;">
+
+  <!-- Performance Score Card -->
+  <div style="
+    background: linear-gradient(135deg, #0d1520, #111);
+    border: 1px solid #1a2f45;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  ">
+    <div style="text-align:center; min-width:120px;">
+      <div id="scoreCircle" style="
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: conic-gradient({{ performance_grade_color }} 0%, #1a2f45 0%);
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto;
+      ">
+        <div style="
+          width: 76px; height: 76px;
+          border-radius: 50%;
+          background: #0d1520;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+        ">
+          <span style="font-size:22px; font-weight:800; color:{{ performance_grade_color }};">{{ performance_score }}</span>
+          <span style="font-size:11px; color:#555f70; letter-spacing:1px;">SCORE</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <span style="
+          font-size:18px; font-weight:800;
+          color:{{ performance_grade_color }};
+          background:rgba(0,0,0,0.3);
+          padding:2px 12px;
+          border-radius:20px;
+          border:1px solid {{ performance_grade_color }}33;
+        ">Grade {{ performance_grade }}</span>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:200px;">
+      <div style="font-size:18px; font-weight:700; color:#f0f2f8; margin-bottom:12px;">
+        Performance Overview
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div style="background:#060d14; border-radius:8px; padding:8px 12px; border-left:3px solid #00E87A;">
+          <div style="font-size:18px; font-weight:700; color:#00E87A;">{{ attendance_stats.month_days }}</div>
+          <div style="font-size:11px; color:#555f70; letter-spacing:1px;">DAYS THIS MONTH</div>
+        </div>
+        <div style="background:#060d14; border-radius:8px; padding:8px 12px; border-left:3px solid #FBB040;">
+          <div style="font-size:18px; font-weight:700; color:#FBB040;" id="lateCount">-</div>
+          <div style="font-size:11px; color:#555f70; letter-spacing:1px;">LATE ARRIVALS</div>
+        </div>
+        <div style="background:#060d14; border-radius:8px; padding:8px 12px; border-left:3px solid #00D4FF;">
+          <div style="font-size:18px; font-weight:700; color:#00D4FF;" id="completedCount">-</div>
+          <div style="font-size:11px; color:#555f70; letter-spacing:1px;">TASKS COMPLETED</div>
+        </div>
+        <div style="background:#060d14; border-radius:8px; padding:8px 12px; border-left:3px solid #FF5A72;">
+          <div style="font-size:18px; font-weight:700; color:#FF5A72;" id="declinedCount">-</div>
+          <div style="font-size:11px; color:#555f70; letter-spacing:1px;">TASKS DECLINED</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="min-width:180px; font-size:12px; color:#555f70; font-family:monospace;">
+      <div style="color:#9aa5b8; margin-bottom:6px; font-weight:600;">SCORE RULES</div>
+      <div style="color:#00E87A;">+20 proof approved</div>
+      <div style="color:#00D4FF;">+2&nbsp; on-time arrival</div>
+      <div style="color:#FF5A72;">-15 proof rejected</div>
+      <div style="color:#FBB040;">-10 task declined</div>
+      <div style="color:#FF9500;">-3&nbsp; late arrival</div>
+      <div style="color:#FF5A72;">-5&nbsp; absent day</div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-size:12px; font-weight:700; color:#00D4FF; letter-spacing:2px; margin-bottom:14px;">ATTENDANCE TREND</div>
+      <div style="position:relative; height:200px;"><canvas id="attendanceTrendChart"></canvas></div>
+    </div>
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-size:12px; font-weight:700; color:#00E87A; letter-spacing:2px; margin-bottom:14px;">HOURS WORKED</div>
+      <div style="position:relative; height:200px;"><canvas id="hoursWorkedChart"></canvas></div>
+    </div>
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-size:12px; font-weight:700; color:#A78BFA; letter-spacing:2px; margin-bottom:14px;">TASK BREAKDOWN</div>
+      <div style="position:relative; height:200px;"><canvas id="taskStatusChart"></canvas></div>
+    </div>
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-size:12px; font-weight:700; color:#FBB040; letter-spacing:2px; margin-bottom:14px;">MONTHLY ATTENDANCE</div>
+      <div style="position:relative; height:200px;"><canvas id="monthlyAttChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Performance Log -->
+  <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px; margin-bottom:20px;">
+    <div style="font-size:12px; font-weight:700; color:#9aa5b8; letter-spacing:2px; margin-bottom:14px;">PERFORMANCE HISTORY</div>
+    <div id="perfLogList" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">
+      <div style="color:#555f70; font-size:13px;">Loading...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+  var EMP_ID = {{ session.get('employee_id', 0) }};
+  var SCORE  = {{ performance_score }};
+  var COLOR  = '{{ performance_grade_color }}';
+
+  // Animate score circle
+  var pct = SCORE / 100;
+  document.getElementById('scoreCircle').style.background =
+    'conic-gradient(' + COLOR + ' ' + (pct*360) + 'deg, #1a2f45 0deg)';
+
+  Chart.defaults.color = '#555f70';
+  Chart.defaults.borderColor = '#1a2f45';
+
+  fetch('/api/charts/employee/' + EMP_ID)
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var att  = data.attendance;
+      var perf = data.performance;
+      var tsk  = data.tasks;
+
+      document.getElementById('lateCount').textContent      = perf.days_late;
+      document.getElementById('completedCount').textContent = perf.tasks_completed;
+      document.getElementById('declinedCount').textContent  = perf.tasks_declined;
+
+      // Chart 1 — Attendance trend
+      new Chart(document.getElementById('attendanceTrendChart'), {
+        type: 'bar',
+        data: {
+          labels: att.dates.slice(-14),
+          datasets: [
+            {
+              label: 'On Time',
+              data: att.dates.slice(-14).map(function(d,i){
+                return att.late[att.dates.length-14+i] ? 0 : 1;
+              }),
+              backgroundColor: '#00E87A44',
+              borderColor: '#00E87A',
+              borderWidth: 1,
+            },
+            {
+              label: 'Late',
+              data: att.late.slice(-14),
+              backgroundColor: '#FBB04044',
+              borderColor: '#FBB040',
+              borderWidth: 1,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxRotation: 45, font: { size: 9 } } },
+            y: { max: 1.2, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+
+      // Chart 2 — Hours worked
+      new Chart(document.getElementById('hoursWorkedChart'), {
+        type: 'line',
+        data: {
+          labels: att.dates.slice(-14),
+          datasets: [{
+            label: 'Hours',
+            data: att.hours.slice(-14),
+            borderColor: '#00E87A',
+            backgroundColor: '#00E87A11',
+            fill: true, tension: 0.4,
+            pointBackgroundColor: '#00E87A',
+            pointRadius: 3,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { ticks: { maxRotation: 45, font: { size: 9 } } } }
+        }
+      });
+
+      // Chart 3 — Task status donut
+      var taskColors = {
+        'pending':'#FBB040','accepted':'#00D4FF','in_progress':'#A78BFA',
+        'proof_submitted':'#FF9500','completed':'#00E87A',
+        'declined':'#FF5A72','rejected':'#CC2244'
+      };
+      new Chart(document.getElementById('taskStatusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: tsk.labels,
+          datasets: [{
+            data: tsk.counts,
+            backgroundColor: tsk.labels.map(function(l){ return taskColors[l] || '#555f70'; }),
+            borderColor: '#111',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'right', labels:{ font:{size:10}, padding:8 } } }
+        }
+      });
+
+      // Chart 4 — Monthly attendance
+      new Chart(document.getElementById('monthlyAttChart'), {
+        type: 'bar',
+        data: {
+          labels: att.monthly_labels,
+          datasets: [{
+            label: 'Days Present',
+            data: att.monthly_days,
+            backgroundColor: '#FBB04088',
+            borderColor: '#FBB040',
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      // Performance log
+      var logEl = document.getElementById('perfLogList');
+      if (!perf.log || perf.log.length === 0) {
+        logEl.innerHTML = '<div style="color:#555f70;font-size:13px;">No performance history yet.</div>';
+      } else {
+        logEl.innerHTML = perf.log.map(function(l) {
+          var color = l.points > 0 ? '#00E87A' : '#FF5A72';
+          var sign  = l.points > 0 ? '+' : '';
+          return '<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;'
+            + 'background:#060d14;border-radius:8px;border-left:3px solid ' + color + ';">'
+            + '<span style="font-family:monospace;font-size:14px;font-weight:700;color:' + color + ';min-width:40px;">'
+            + sign + l.points + '</span>'
+            + '<div style="flex:1;">'
+            + '<div style="color:#f0f2f8;font-size:13px;">' + l.action.replace(/_/g,' ').toUpperCase() + '</div>'
+            + '<div style="color:#555f70;font-size:11px;">' + (l.reason || '') + '</div>'
+            + '</div>'
+            + '<span style="font-size:11px;color:#555f70;font-family:monospace;">'
+            + l.date.substring(0,16) + '</span>'
+            + '</div>';
+        }).join('');
+      }
+    })
+    .catch(function(e){ console.error('Chart load error:', e); });
+})();
+</script>

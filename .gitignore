@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+model/
+static/proof_uploads/
+.env
+*.keras

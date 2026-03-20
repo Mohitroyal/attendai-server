@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — AttendAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --panel: #12121a; --border: #1e1e2e;
+    --accent: #00e5ff; --accent2: #7c3aed;
+    --text: #e2e8f0; --muted: #64748b;
+    --success: #00e5a0; --warn: #fbbf24; --error: #ff4757;
+    --sidebar: #0d0d14;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  /* Grid bg */
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,229,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.02) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+  .sidebar-logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .logo-row { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 38px; height: 38px; background: linear-gradient(135deg,var(--accent2),var(--accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 20px; height: 20px; color: white; }
+  .logo-text h1 { font-size: 16px; font-weight: 800; color: #fff; }
+  .logo-text p { font-family: 'Space Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; }
+  .nav-section { padding: 0 12px; flex: 1; }
+  .nav-label { font-family: 'Space Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 0 8px; margin: 16px 0 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; border: none; background: none; width: 100%; transition: all 0.15s; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(0,229,255,0.08); color: var(--accent); }
+  .nav-item.danger:hover { background: rgba(255,71,87,0.1); color: var(--error); }
+  .sidebar-footer { padding: 16px 12px 0; border-top: 1px solid var(--border); margin-top: auto; }
+  .admin-badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); border-radius: 10px; }
+  .avatar { width: 32px; height: 32px; background: linear-gradient(135deg,var(--accent2),var(--accent)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: white; }
+  .admin-info h4 { font-size: 12px; font-weight: 700; color: #fff; }
+  .admin-info p { font-family: 'Space Mono',monospace; font-size: 9px; color: var(--accent); }
+
+  .main { margin-left: 240px; padding: 32px; position: relative; z-index: 1; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title h2 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+  .page-title p { font-family: 'Space Mono',monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: border-color 0.2s; }
+  .stat-card:hover { border-color: rgba(0,229,255,0.2); }
+  .stat-label { font-family: 'Space Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+  .stat-value { font-size: 32px; font-weight: 800; color: #fff; line-height: 1; }
+  .stat-value.cyan { color: var(--accent); }
+  .stat-value.green { color: var(--success); }
+  .stat-value.purple { color: #a78bfa; }
+  .stat-value.warn { color: var(--warn); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: 'Space Mono',monospace; }
+
+  /* Grid layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* Card */
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .card-header h3 { font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .card-header h3 svg { width: 15px; height: 15px; color: var(--accent); }
+
+  /* Manual checkin form */
+  .checkin-form { padding: 20px; }
+  .form-field { margin-bottom: 14px; }
+  .form-field label { display: block; font-family: 'Space Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 7px; }
+  .form-field select, .form-field input {
+    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; color: var(--text);
+    font-family: 'Syne',sans-serif; font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-field select:focus, .form-field input:focus { border-color: var(--accent); }
+  .form-field select option { background: #1a1a2e; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .btn-checkin { padding: 12px; border: none; border-radius: 10px; font-family: 'Syne',sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-checkin.in { background: linear-gradient(135deg,rgba(0,229,160,0.2),rgba(0,229,160,0.1)); color: var(--success); border: 1px solid rgba(0,229,160,0.3); }
+  .btn-checkin.in:hover { background: var(--success); color: #000; }
+  .btn-checkin.out { background: rgba(251,191,36,0.1); color: var(--warn); border: 1px solid rgba(251,191,36,0.3); }
+  .btn-checkin.out:hover { background: var(--warn); color: #000; }
+  .btn-checkin svg { width: 15px; height: 15px; }
+
+  /* Status msg */
+  .status-msg { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; display: none; }
+  .status-msg.ok { background: rgba(0,229,160,0.1); color: var(--success); border: 1px solid rgba(0,229,160,0.2); }
+  .status-msg.warn { background: rgba(251,191,36,0.1); color: var(--warn); border: 1px solid rgba(251,191,36,0.2); }
+  .status-msg.err { background: rgba(255,71,87,0.1); color: var(--error); border: 1px solid rgba(255,71,87,0.2); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 16px; text-align: left; font-family: 'Space Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; font-family: 'Space Mono',monospace; }
+  .badge-green { background: rgba(0,229,160,0.15); color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
+  .badge-yellow { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+  .badge-gray { background: rgba(100,116,139,0.1); color: var(--muted); border: 1px solid var(--border); }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+
+  /* Activity log */
+  .activity-list { padding: 12px 16px; max-height: 280px; overflow-y: auto; }
+  .activity-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .activity-item:last-child { border-bottom: none; }
+  .act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .act-dot.in { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .act-dot.out { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .act-name { font-size: 13px; font-weight: 600; color: #fff; flex: 1; }
+  .act-time { font-family: 'Space Mono',monospace; font-size: 10px; color: var(--muted); }
+  .act-badge { font-family: 'Space Mono',monospace; font-size: 9px; padding: 2px 7px; border-radius: 100px; }
+
+  #datetime { font-family: 'Space Mono',monospace; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-mark">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      </div>
+      <div class="logo-text"><h1>AttendAI</h1><p>Admin Panel</p></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item active" href="/dashboard">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="/attendance">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      Attendance
+    </a>
+    <a class="nav-item" href="/admin/tasks">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Assign Tasks
+    </a>
+    <a class="nav-item" href="/admin/employees">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Employees
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="admin-badge">
+      <div class="avatar">A</div>
+      <div class="admin-info"><h4>Administrator</h4><p>● ONLINE</p></div>
+    </div>
+    <a href="/logout" class="nav-item danger" style="margin-top:10px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">
+      <h2>Dashboard</h2>
+      <p id="datetime">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Employees</div>
+      <div class="stat-value purple">{{ total_employees }}</div>
+      <div class="stat-sub">registered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today Check-ins</div>
+      <div class="stat-value cyan">{{ today_checkins }}</div>
+      <div class="stat-sub">{{ today }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Currently Present</div>
+      <div class="stat-value green">{{ present_now }}</div>
+      <div class="stat-sub">not checked out</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">This Week</div>
+      <div class="stat-value warn">{{ week_total }}</div>
+      <div class="stat-sub">total check-ins</div>
+    </div>
+  </div>
+
+  <!-- Face Scanner (only if camera available) -->
+  {% if camera_available %}
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <h3>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+        Face Recognition Scanner
+      </h3>
+      <div style="display:flex;gap:8px">
+        <button id="startBtn" onclick="startScan()" style="padding:6px 14px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;color:var(--success);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer">▶ Start</button>
+        <button id="stopBtn" onclick="stopScan()" style="padding:6px 14px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);border-radius:8px;color:var(--error);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:none">■ Stop</button>
+      </div>
+    </div>
+    <div style="position:relative;background:#000;aspect-ratio:16/9">
+      <img id="cameraFeed" style="width:100%;height:100%;object-fit:cover;display:none" src="/video">
+      <div id="scanPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px">
+        Click ▶ Start to begin scanning
+      </div>
+    </div>
+    <!-- Confirm Modal -->
+    <div id="confirmModal" style="display:none;padding:20px;background:rgba(0,229,160,0.05);border-top:1px solid rgba(0,229,160,0.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px">DETECTED</div>
+          <div style="font-size:20px;font-weight:800;color:var(--success)" id="detectedName">—</div>
+          <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px">Confidence: <span id="detectedConf">—</span>%</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="confirmCheckin()" style="padding:10px 20px;background:var(--success);border:none;border-radius:10px;color:#000;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer">✓ Confirm</button>
+          <button onclick="scanAgain()" style="padding:10px 20px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">↺ Scan Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid-2">
+
+    <!-- Manual Check-in -->
+    <div class="card">
+      <div class="card-header">
+        <h3>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Manual Attendance
+        </h3>
+      </div>
+      <div class="checkin-form">
+        <div class="form-field">
+          <label>Select Employee</label>
+          <select id="empSelect">
+            <option value="">-- Choose employee --</option>
+            {% for emp in employees %}
+            <option value="{{ emp[1] }}">{{ emp[1] }} — {{ emp[2] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn-checkin in" onclick="markAttendance('checkin')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+            Check In
+          </button>
+          <button class="btn-checkin out" onclick="markAttendance('checkout')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Check Out
+          </button>
+        </div>
+        <div class="status-msg" id="statusMsg"></div>
+      </div>
+    </div>
+
+    <!-- Today's Attendance -->
+    <div class="card">
+      <div class="card-header">
+        <h3>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Today's Attendance
+        </h3>
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">{{ today }}</span>
+      </div>
+      <div class="activity-list">
+        {% if today_records %}
+          {% for rec in today_records %}
+          <div class="activity-item">
+            <div class="act-dot {% if rec[2] %}out{% else %}in{% endif %}"></div>
+            <span class="act-name">{{ rec[0] }}</span>
+            <span class="act-time">In: {{ rec[1] }}</span>
+            {% if rec[2] %}
+              <span class="act-badge badge-yellow">Out: {{ rec[2] }}</span>
+            {% else %}
+              <span class="act-badge badge-green" style="background:rgba(0,229,160,0.1);color:var(--success);border:1px solid rgba(0,229,160,0.2)">● Present</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No check-ins yet today.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Records -->
+  <div class="card">
+    <div class="card-header">
+      <h3>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        Recent Attendance
+      </h3>
+      <a href="/attendance" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none">View All →</a>
+    </div>
+    {% if recent %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Date</th><th>Week</th><th>Check In</th><th>Check Out</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in recent %}
+        <tr>
+          <td style="font-weight:600;color:#fff">{{ row[1] }}</td>
+          <td style="font-family:'Space Mono',monospace;font-size:11px">{{ row[2] }}</td>
+          <td><span class="badge badge-gray">W{{ row[3] }}</span></td>
+          <td style="color:var(--success);font-family:'Space Mono',monospace;font-size:11px">{{ row[4] or '—' }}</td>
+          <td style="color:var(--warn);font-family:'Space Mono',monospace;font-size:11px">{{ row[5] or '—' }}</td>
+          <td>
+            {% if row[5] %}<span class="badge badge-green">✓ Done</span>
+            {% else %}<span class="badge badge-yellow">● Present</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No attendance records yet.</div>
+    {% endif %}
+  </div>
+  <!-- ═══════════════════════════════════════════════════════
+       PERFORMANCE SECTION — embedded directly
+  ═══════════════════════════════════════════════════════ -->
+  <div style="margin-top:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <h3 style="font-size:16px;font-weight:800;color:#fff">📊 Employee Performance</h3>
+        <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px">
+          {% if admin_department %}{{ admin_department }} Department{% else %}All Departments{% endif %} · Live Scores
+        </p>
+      </div>
+      <button onclick="loadAdminCharts()" style="padding:7px 14px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);border-radius:8px;color:var(--accent);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">↺ Refresh Charts</button>
+    </div>
+
+    <!-- Score Cards Row -->
+    <div id="perf-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+      {% for p in perf_summary %}
+      {% set score = p[1]|float %}
+      {% set grade = 'A' if score >= 90 else ('B' if score >= 75 else ('C' if score >= 60 else ('D' if score >= 40 else 'F'))) %}
+      {% set gcol  = '#00E87A' if score >= 90 else ('#00D4FF' if score >= 75 else ('#FBB040' if score >= 60 else ('#FF9500' if score >= 40 else '#FF5A72'))) %}
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:{{ gcol }};opacity:0.6"></div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase">{{ p[0] }}</div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <span style="font-size:28px;font-weight:800;color:{{ gcol }};line-height:1">{{ score|int }}</span>
+          <span style="font-size:11px;font-weight:700;color:{{ gcol }};margin-bottom:4px">/100</span>
+          <span style="margin-left:auto;font-size:22px;font-weight:800;color:{{ gcol }}">{{ grade }}</span>
+        </div>
+        <div style="margin-top:10px;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:{{ score }}%;background:{{ gcol }};border-radius:3px;transition:width 0.5s"></div>
+        </div>
+      </div>
+      {% else %}
+      <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">No performance data yet — scores appear after employee activity</div>
+      {% endfor %}
+    </div>
+
+    <!-- Charts Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <!-- Employee Score Bar Chart -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Performance Scores
+          </h3>
+        </div>
+        <div style="padding:16px">
+          <canvas id="adminScoreChart" height="220"></canvas>
+          <div id="adminScoreEmpty" style="display:none;text-align:center;padding:40px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Attendance Trend -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v16H4z"/></svg>
+            Attendance Trend (6 Months)
+          </h3>
+        </div>
+        <div style="padding:16px">
+          <canvas id="adminTrendChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <!-- Task Status Donut -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/></svg>
+            Task Status Breakdown
+          </h3>
+        </div>
+        <div style="padding:16px;display:flex;align-items:center;justify-content:center">
+          <canvas id="adminTaskChart" height="220" style="max-width:260px"></canvas>
+        </div>
+      </div>
+
+      <!-- Present vs Late Bar -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Present vs Late Per Employee
+          </h3>
+        </div>
+        <div style="padding:16px">
+          <canvas id="adminAttChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// Chart defaults
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#1e1e2e';
+Chart.defaults.font.family = "'Space Mono', monospace";
+
+var _adminScoreChart, _adminTrendChart, _adminTaskChart, _adminAttChart;
+
+async function loadAdminCharts() {
+  try {
+    var res  = await fetch('/api/charts/admin');
+    var data = await res.json();
+    if (data.error) return;
+
+    // ── Score Bar Chart ──
+    var scoreCtx = document.getElementById('adminScoreChart').getContext('2d');
+    if (_adminScoreChart) _adminScoreChart.destroy();
+    var scoreColors = (data.employees.scores||[]).map(function(s){
+      return s>=90?'rgba(0,232,122,0.8)':s>=75?'rgba(0,212,255,0.8)':s>=60?'rgba(251,176,64,0.8)':s>=40?'rgba(255,149,0,0.8)':'rgba(255,90,114,0.8)';
+    });
+    _adminScoreChart = new Chart(scoreCtx, {
+      type: 'bar',
+      data: {
+        labels: data.employees.names,
+        datasets: [{
+          label: 'Performance Score',
+          data: data.employees.scores,
+          backgroundColor: scoreColors,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.04)' },
+               ticks: { callback: function(v){ return v+'%'; } } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // ── Trend Line Chart ──
+    var trendCtx = document.getElementById('adminTrendChart').getContext('2d');
+    if (_adminTrendChart) _adminTrendChart.destroy();
+    _adminTrendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: data.trend.labels,
+        datasets: [{
+          label: 'Check-ins',
+          data: data.trend.counts,
+          borderColor: 'rgba(0,229,255,0.8)',
+          backgroundColor: 'rgba(0,229,255,0.08)',
+          fill: true, tension: 0.4, pointRadius: 4,
+          pointBackgroundColor: 'rgba(0,229,255,1)'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { grid: { color: 'rgba(255,255,255,0.04)' } }, x: { grid: { display: false } } }
+      }
+    });
+
+    // ── Task Donut ──
+    var taskCtx = document.getElementById('adminTaskChart').getContext('2d');
+    if (_adminTaskChart) _adminTaskChart.destroy();
+    var taskColors = ['rgba(251,191,36,0.8)','rgba(59,130,246,0.8)','rgba(139,92,246,0.8)','rgba(16,185,129,0.8)','rgba(220,38,38,0.8)','rgba(100,116,139,0.8)'];
+    _adminTaskChart = new Chart(taskCtx, {
+      type: 'doughnut',
+      data: {
+        labels: data.tasks.labels,
+        datasets: [{ data: data.tasks.counts, backgroundColor: taskColors, borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 10 } } } }
+      }
+    });
+
+    // ── Present vs Late ──
+    var attCtx = document.getElementById('adminAttChart').getContext('2d');
+    if (_adminAttChart) _adminAttChart.destroy();
+    _adminAttChart = new Chart(attCtx, {
+      type: 'bar',
+      data: {
+        labels: data.employees.names,
+        datasets: [
+          { label: 'Present', data: data.employees.present, backgroundColor: 'rgba(0,229,160,0.7)', borderRadius: 4 },
+          { label: 'Late',    data: data.employees.late,    backgroundColor: 'rgba(251,191,36,0.7)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { size: 10 } } } },
+        scales: {
+          x: { stacked: false, grid: { display: false } },
+          y: { stacked: false, grid: { color: 'rgba(255,255,255,0.04)' } }
+        }
+      }
+    });
+
+  } catch(e) { console.error('Chart load error:', e); }
+}
+
+// Load charts on page ready
+document.addEventListener('DOMContentLoaded', loadAdminCharts);
+
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById('datetime').textContent =
+    now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) +
+    ' — ' + now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateDateTime(); setInterval(updateDateTime, 1000);
+
+// ── FACE SCANNER ──────────────────────────────────────────────────────────────
+let scanning = false;
+let pollInterval = null;
+
+function startScan() {
+  scanning = true;
+  document.getElementById('cameraFeed').style.display = 'block';
+  document.getElementById('cameraFeed').src = '/video?' + Date.now();
+  document.getElementById('scanPlaceholder').style.display = 'none';
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'block';
+  pollInterval = setInterval(pollPrediction, 800);
+}
+
+function stopScan() {
+  scanning = false;
+  clearInterval(pollInterval);
+  document.getElementById('cameraFeed').style.display = 'none';
+  document.getElementById('cameraFeed').src = '';
+  document.getElementById('scanPlaceholder').style.display = 'flex';
+  document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('confirmModal').style.display = 'none';
+}
+
+function pollPrediction() {
+  fetch('/api/prediction')
+    .then(r => r.json())
+    .then(d => {
+      if (d.waiting) {
+        document.getElementById('confirmModal').style.display = 'block';
+        document.getElementById('detectedName').textContent = d.name;
+        document.getElementById('detectedConf').textContent = d.conf;
+      }
+    });
+}
+
+function confirmCheckin() {
+  fetch('/api/confirm', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('confirmModal').style.display = 'none';
+      const msg = document.getElementById('statusMsg');
+      msg.textContent = d.message;
+      msg.className = 'status-msg ' + (d.status === 'ok' ? 'ok' : 'warn');
+      msg.style.display = 'block';
+      if (d.status === 'ok') setTimeout(() => location.reload(), 2000);
+    });
+}
+
+function scanAgain() {
+  fetch('/api/scan_again', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(() => { document.getElementById('confirmModal').style.display = 'none'; });
+}
+
+// ── MANUAL CHECK-IN ────────────────────────────────────────────────────────────
+function markAttendance(type) {
+  const name = document.getElementById('empSelect').value;
+  const msg = document.getElementById('statusMsg');
+  if (!name) {
+    msg.textContent = '⚠️ Please select an employee first.';
+    msg.className = 'status-msg warn';
+    msg.style.display = 'block';
+    return;
+  }
+  const url = type === 'checkin' ? '/api/checkin' : '/api/checkout';
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name})
+  })
+  .then(r => r.json())
+  .then(d => {
+    msg.textContent = d.message;
+    msg.className = 'status-msg ' + (d.status === 'ok' ? 'ok' : 'warn');
+    msg.style.display = 'block';
+    if (d.status === 'ok') setTimeout(() => location.reload(), 1500);
+  });
+}
+</script>
+</body>
+</html>

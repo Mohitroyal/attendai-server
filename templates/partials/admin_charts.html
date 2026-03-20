@@ -1,0 +1,276 @@
+<!-- 
+  ================================================================
+  SAVE AS: templates/partials/admin_charts.html
+  Include in dashboard.html with:
+  {% include 'partials/admin_charts.html' %}
+
+  Add to <head>:
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  ================================================================
+-->
+
+<div class="admin-charts-section" style="margin-top: 2rem;">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; color:#f0f2f8; letter-spacing:2px;">
+      📊 ANALYTICS
+      {% if admin_department %}
+        <span style="font-size:13px; color:#00D4FF; margin-left:8px;">— {{ admin_department }} Dept</span>
+      {% endif %}
+    </div>
+    <button onclick="recalculateScores()" style="
+      background:transparent; border:1px solid #1a2f45;
+      color:#9aa5b8; padding:6px 14px; border-radius:8px;
+      font-size:11px; font-family:'IBM Plex Mono',monospace;
+      cursor:pointer; transition:.2s;
+    " onmouseover="this.style.borderColor='#00D4FF';this.style.color='#00D4FF'"
+       onmouseout="this.style.borderColor='#1a2f45';this.style.color='#9aa5b8'">
+      ↻ RECALCULATE
+    </button>
+  </div>
+
+  <!-- Charts Grid -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+
+    <!-- Employee Performance Bar -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#00D4FF; letter-spacing:2px; margin-bottom:14px;">
+        EMPLOYEE PERFORMANCE SCORES
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="empPerfChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Attendance Trend -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#00E87A; letter-spacing:2px; margin-bottom:14px;">
+        ATTENDANCE TREND
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="adminTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Task Status -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#A78BFA; letter-spacing:2px; margin-bottom:14px;">
+        TASK STATUS
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="adminTaskChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Dept Attendance Rate (super admin only) / Present vs Late -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#FBB040; letter-spacing:2px; margin-bottom:14px;">
+        PRESENT vs LATE
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="presentLateChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Performance Table -->
+  <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#9aa5b8; letter-spacing:2px; margin-bottom:14px;">
+      EMPLOYEE PERFORMANCE TABLE
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="perfTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid #1a2f45;">
+            <th style="text-align:left; padding:8px 12px; color:#555f70; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px;">EMPLOYEE</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-family:'IBM Plex Mono',monospace; font-size:10px;">SCORE</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-family:'IBM Plex Mono',monospace; font-size:10px;">PRESENT</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-family:'IBM Plex Mono',monospace; font-size:10px;">LATE</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-family:'IBM Plex Mono',monospace; font-size:10px;">GRADE</th>
+          </tr>
+        </thead>
+        <tbody id="perfTableBody">
+          <tr><td colspan="5" style="text-align:center; padding:20px; color:#555f70;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+  Chart.defaults.color = '#555f70';
+  Chart.defaults.borderColor = '#1a2f45';
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+
+  const taskColors = {
+    'pending':'#FBB040','accepted':'#00D4FF','in_progress':'#A78BFA',
+    'proof_submitted':'#FF9500','completed':'#00E87A','declined':'#FF5A72','rejected':'#CC2244'
+  };
+
+  function gradeColor(s) {
+    if (s >= 90) return '#00E87A';
+    if (s >= 75) return '#00D4FF';
+    if (s >= 60) return '#FBB040';
+    if (s >= 40) return '#FF9500';
+    return '#FF5A72';
+  }
+  function gradeLabel(s) {
+    if (s >= 90) return 'A';
+    if (s >= 75) return 'B';
+    if (s >= 60) return 'C';
+    if (s >= 40) return 'D';
+    return 'F';
+  }
+
+  let empChart, trendChart, taskChart, plChart;
+
+  function loadCharts() {
+    fetch('/api/charts/admin')
+      .then(r => r.json())
+      .then(data => {
+        const emps  = data.employees;
+        const trend = data.trend;
+        const tasks = data.tasks;
+
+        // Destroy existing
+        if (empChart)   empChart.destroy();
+        if (trendChart) trendChart.destroy();
+        if (taskChart)  taskChart.destroy();
+        if (plChart)    plChart.destroy();
+
+        // Employee performance bar
+        empChart = new Chart(document.getElementById('empPerfChart'), {
+          type: 'bar',
+          data: {
+            labels: emps.names,
+            datasets: [{
+              label: 'Score',
+              data: emps.scores,
+              backgroundColor: emps.scores.map(s => gradeColor(s) + '88'),
+              borderColor: emps.scores.map(s => gradeColor(s)),
+              borderWidth: 1,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { min: 0, max: 100, ticks: { stepSize: 20 } },
+              x: { ticks: { font: { size: 10 } } }
+            }
+          }
+        });
+
+        // Attendance trend line
+        trendChart = new Chart(document.getElementById('adminTrendChart'), {
+          type: 'line',
+          data: {
+            labels: trend.labels,
+            datasets: [{
+              label: 'Check-ins',
+              data: trend.counts,
+              borderColor: '#00E87A',
+              backgroundColor: '#00E87A11',
+              fill: true, tension: 0.4,
+              pointBackgroundColor: '#00E87A', pointRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          }
+        });
+
+        // Task status doughnut
+        taskChart = new Chart(document.getElementById('adminTaskChart'), {
+          type: 'doughnut',
+          data: {
+            labels: tasks.labels,
+            datasets: [{
+              data: tasks.counts,
+              backgroundColor: tasks.labels.map(l => taskColors[l] || '#555f70'),
+              borderColor: '#111', borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position:'right', labels:{ font:{size:10}, padding:8 } } }
+          }
+        });
+
+        // Present vs Late
+        plChart = new Chart(document.getElementById('presentLateChart'), {
+          type: 'bar',
+          data: {
+            labels: emps.names,
+            datasets: [
+              {
+                label: 'Present',
+                data: emps.present,
+                backgroundColor: '#00E87A88',
+                borderColor: '#00E87A',
+                borderWidth: 1, borderRadius: 4,
+              },
+              {
+                label: 'Late',
+                data: emps.late,
+                backgroundColor: '#FBB04088',
+                borderColor: '#FBB040',
+                borderWidth: 1, borderRadius: 4,
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { font:{ size:10 } } } },
+          }
+        });
+
+        // Performance table
+        const tbody = document.getElementById('perfTableBody');
+        if (emps.names.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#555f70;">No data yet</td></tr>';
+          return;
+        }
+        tbody.innerHTML = emps.names.map((name, i) => {
+          const s = emps.scores[i];
+          const gc = gradeColor(s);
+          const gl = gradeLabel(s);
+          return `
+            <tr style="border-bottom:1px solid #0d1520;">
+              <td style="padding:10px 12px; color:#f0f2f8; font-weight:600;">${name}</td>
+              <td style="padding:10px 12px; text-align:center;">
+                <div style="background:${gc}22; color:${gc}; font-weight:700;
+                            padding:2px 10px; border-radius:6px; display:inline-block;
+                            font-family:'IBM Plex Mono',monospace;">
+                  ${s}
+                </div>
+              </td>
+              <td style="padding:10px 12px; text-align:center; color:#00E87A;">${emps.present[i]}</td>
+              <td style="padding:10px 12px; text-align:center; color:#FBB040;">${emps.late[i]}</td>
+              <td style="padding:10px 12px; text-align:center;">
+                <span style="color:${gc}; font-weight:800; font-size:16px;">${gl}</span>
+              </td>
+            </tr>`;
+        }).join('');
+      })
+      .catch(e => console.error('Admin chart error:', e));
+  }
+
+  window.recalculateScores = function() {
+    fetch('/api/performance/recalculate', {method:'POST',
+      headers:{'Content-Type':'application/json'}})
+    .then(r => r.json())
+    .then(d => { alert(d.message); loadCharts(); });
+  };
+
+  loadCharts();
+  // Auto refresh every 60 seconds
+  setInterval(loadCharts, 60000);
+})();
+</script>

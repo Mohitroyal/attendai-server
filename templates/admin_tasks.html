@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assign Tasks — AttendAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --panel: #12121a; --border: #1e1e2e;
+    --accent: #00e5ff; --accent2: #7c3aed;
+    --text: #e2e8f0; --muted: #64748b;
+    --success: #00e5a0; --warn: #fbbf24; --error: #ff4757;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+  .sidebar-logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .logo-row { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 36px; height: 36px; background: linear-gradient(135deg,var(--accent2),var(--accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 18px; height: 18px; color: white; }
+  .logo-text h1 { font-size: 16px; font-weight: 800; color: #fff; }
+  .logo-text p { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .nav-section { padding: 0 12px; flex: 1; }
+  .nav-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; margin-top: 16px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none; border: none; background: none; width: 100%; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(0,229,255,0.08); color: var(--accent); }
+  .nav-item.danger:hover { background: rgba(255,71,87,0.08); color: var(--error); }
+  .sidebar-footer { padding: 16px 12px 0; border-top: 1px solid var(--border); margin-top: auto; }
+  .admin-badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); border-radius: 10px; }
+  .avatar { width: 32px; height: 32px; background: linear-gradient(135deg,var(--accent2),var(--accent)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: white; flex-shrink: 0; }
+  .admin-info h4 { font-size: 12px; font-weight: 700; color: #fff; }
+  .admin-info p { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--accent); }
+
+  .main { margin-left: 240px; padding: 32px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .page-title h2 { font-size: 24px; font-weight: 800; color: #fff; }
+  .page-title p { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Page tabs */
+  .page-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .page-tab { padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted); transition: all 0.15s; position: relative; }
+  .page-tab:hover { color: var(--text); border-color: rgba(255,255,255,0.1); }
+  .page-tab.active { background: rgba(0,229,255,0.08); color: var(--accent); border-color: rgba(0,229,255,0.25); }
+  .proof-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--error); color: white; border-radius: 100px; font-size: 10px; font-weight: 800; padding: 1px 7px; margin-left: 6px; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .card-header h3 { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .card-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
+
+  .form-body { padding: 20px; }
+  .form-field { margin-bottom: 16px; }
+  .form-field label { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .form-field input, .form-field textarea, .form-field select {
+    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 13px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-field input:focus, .form-field textarea:focus, .form-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.06); background: rgba(0,229,255,0.03); }
+  .form-field textarea { resize: vertical; min-height: 80px; }
+  .form-field select option { background: #1a1a2e; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .btn-assign { width: 100%; padding: 13px; background: linear-gradient(135deg,var(--accent2),var(--accent)); border: none; border-radius: 10px; color: white; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(0,229,255,0.15); margin-top: 4px; }
+  .btn-assign:hover { opacity: 0.9; }
+  .btn-assign svg { width: 16px; height: 16px; }
+
+  .task-list { padding: 16px; max-height: 600px; overflow-y: auto; }
+  .task-item { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; transition: border-color 0.2s; position: relative; overflow: hidden; }
+  .task-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .task-item.high::before { background: var(--error); }
+  .task-item.medium::before { background: var(--warn); }
+  .task-item.low::before { background: var(--success); }
+  .task-item:hover { border-color: rgba(0,229,255,0.2); }
+  .task-item-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+  .task-item-title { font-size: 14px; font-weight: 700; color: #fff; }
+  .task-item-emp { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .task-item-desc { font-size: 12px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5; }
+  .task-item-footer { display: flex; align-items: center; justify-content: space-between; }
+  .task-due { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 100px; font-size: 10px; font-weight: 700; }
+  .badge-red { background: rgba(255,71,87,0.15); color: var(--error); border: 1px solid rgba(255,71,87,0.25); }
+  .badge-yellow { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+  .badge-green { background: rgba(0,229,160,0.15); color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
+  .badge-blue { background: rgba(0,229,255,0.1); color: var(--accent); border: 1px solid rgba(0,229,255,0.2); }
+  .badge-gray { background: rgba(100,116,139,0.1); color: var(--muted); border: 1px solid var(--border); }
+  .badge-orange { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+  .badge-cyan { background: rgba(0,229,255,0.08); color: var(--accent); border: 1px solid rgba(0,229,255,0.2); }
+
+  .delete-btn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; border-radius: 6px; transition: all 0.15s; }
+  .delete-btn:hover { background: rgba(255,71,87,0.1); color: var(--error); }
+  .delete-btn svg { width: 14px; height: 14px; }
+
+  .emp-tabs { display: flex; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .emp-tab { padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted); transition: all 0.15s; }
+  .emp-tab.active { background: rgba(0,229,255,0.1); color: var(--accent); border-color: rgba(0,229,255,0.25); }
+
+  /* Proof review cards */
+  .proof-list { padding: 16px; }
+  .proof-card {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .proof-card:hover { border-color: rgba(0,229,255,0.2); }
+  .proof-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .proof-card-title { font-size: 14px; font-weight: 700; color: #fff; }
+  .proof-card-emp { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); margin-top: 3px; }
+  .proof-submitted-at { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+  .proof-section { margin-bottom: 12px; }
+  .proof-section-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .proof-text-content { background: rgba(0,229,255,0.04); border: 1px solid rgba(0,229,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text); line-height: 1.6; }
+  .proof-link-content { display: flex; align-items: center; gap: 8px; }
+  .proof-link-content a { color: var(--accent); font-size: 13px; text-decoration: none; word-break: break-all; }
+  .proof-link-content a:hover { text-decoration: underline; }
+  .proof-img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-top: 6px; max-height: 200px; object-fit: contain; }
+  .verdict-area { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 12px; }
+  .verdict-note { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 12px; outline: none; resize: none; min-height: 60px; margin-bottom: 10px; }
+  .verdict-note:focus { border-color: var(--accent); }
+  .verdict-btns { display: flex; gap: 10px; }
+  .btn-approve { flex: 1; padding: 10px; background: rgba(0,229,160,0.12); border: 1px solid rgba(0,229,160,0.3); border-radius: 10px; color: var(--success); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-approve:hover { background: rgba(0,229,160,0.25); }
+  .btn-reject { flex: 1; padding: 10px; background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.25); border-radius: 10px; color: var(--error); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-reject:hover { background: rgba(255,71,87,0.2); }
+  .verdict-done { padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; text-align: center; }
+  .verdict-done.approved { background: rgba(0,229,160,0.1); color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
+  .verdict-done.rejected { background: rgba(255,71,87,0.1); color: var(--error); border: 1px solid rgba(255,71,87,0.25); }
+
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+  .empty-state svg { width: 36px; height: 36px; margin-bottom: 10px; opacity: 0.3; display: block; margin: 0 auto 10px; }
+
+  .toast { position: fixed; bottom: 28px; right: 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px; font-size: 13px; font-weight: 600; color: #fff; z-index: 9999; transition: all 0.3s; opacity: 0; transform: translateY(20px); display: flex; align-items: center; gap: 8px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-mark"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+      <div class="logo-text"><h1>AttendAI</h1><p>Admin Panel</p></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg><span>Dashboard</span></a>
+    <a class="nav-item" href="/attendance"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg><span>Attendance</span></a>
+    <a class="nav-item active" href="/admin/tasks"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><span>Assign Tasks</span></a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="admin-badge">
+      <div class="avatar">A</div>
+      <div class="admin-info"><h4>Admin</h4><p>● ONLINE</p></div>
+    </div>
+    <a href="/logout" class="nav-item danger" style="margin-top:10px"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg><span>Logout</span></a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">
+      <h2>Task Management</h2>
+      <p>Assign tasks and review proof submissions</p>
+    </div>
+  </div>
+
+  <!-- Page tabs -->
+  <div class="page-tabs">
+    <button class="page-tab active" onclick="switchTab('assign', this)">📋 Assign & Track</button>
+    <button class="page-tab" onclick="switchTab('proofs', this)">
+      🔍 Review Proofs
+      {% if pending_proofs > 0 %}
+      <span class="proof-badge">{{ pending_proofs }}</span>
+      {% endif %}
+    </button>
+    <button class="page-tab" onclick="switchTab('sa-tasks', this)" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">
+      ★ From Super Admin
+      {% set unassigned_sa = sa_tasks | selectattr(3, 'none') | list %}
+      {% if unassigned_sa|length > 0 %}
+      <span class="proof-badge" style="background:#f59e0b">{{ unassigned_sa|length }}</span>
+      {% endif %}
+    </button>
+  </div>
+
+  <!-- ══ TAB 1: Assign & Track ══ -->
+  <div class="tab-content active" id="tab-assign">
+    <div class="grid-2">
+
+      <!-- Assign Task Form -->
+      <div class="card">
+        <div class="card-header"><h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Assign New Task</h3></div>
+        <div class="form-body">
+          <div class="form-field"><label>Task Title</label><input type="text" id="taskTitle" placeholder="e.g. Fix login bug, Write report..."></div>
+          <div class="form-field"><label>Description</label><textarea id="taskDesc" placeholder="Describe what needs to be done..."></textarea></div>
+          <div class="form-row">
+            <div class="form-field"><label>Assign To</label>
+              <select id="taskEmployee">
+                <option value="">Select employee...</option>
+                {% for emp in employees %}<option value="{{ emp[0] }}">{{ emp[1] }} — {{ emp[3] }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-field"><label>Priority</label>
+              <select id="taskPriority">
+                <option value="medium">🟡 Medium</option>
+                <option value="high">🔴 High</option>
+                <option value="low">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-field"><label>Due Date</label><input type="date" id="taskDue"></div>
+          <button class="btn-assign" onclick="assignTask()"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Assign Task</button>
+        </div>
+      </div>
+
+      <!-- All Tasks -->
+      <div class="card">
+        <div class="card-header">
+          <h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>All Tasks</h3>
+          <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">{{ all_tasks|length }} tasks</span>
+        </div>
+        <div class="emp-tabs">
+          <button class="emp-tab active" onclick="filterByEmp('all', this)">All</button>
+          {% for emp in employees %}<button class="emp-tab" onclick="filterByEmp('{{ emp[0] }}', this)">{{ emp[1] }}</button>{% endfor %}
+          <button class="emp-tab" onclick="filterBySuperAdmin(this)" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">★ Super Admin</button>
+        </div>
+        <div class="task-list" id="taskList">
+          {% if all_tasks %}
+            {% for task in all_tasks %}
+            {# 0=id,1=title,2=desc,3=assigned_to,4=assigned_by,5=priority,6=status,7=due,8=created,9=emp_name,10=dept,11=proof_text,12=proof_link,13=proof_image,14=proof_at,15=verdict,16=note #}
+            <div class="task-item {{ task[5] }}" data-emp="{{ task[3] }}" data-assignedby="{{ task[4] or '' }}" id="admin-task-{{ task[0] }}" style="{% if task[4] == 'Super Admin' %}border-left: 3px solid #f59e0b;{% endif %}">
+              <div class="task-item-header">
+                <div>
+                  <div class="task-item-title">
+                    {{ task[1] }}
+                    {% if task[4] == 'Super Admin' %}
+                    <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:20px;margin-left:6px;font-weight:700;">★ Super Admin</span>
+                    {% endif %}
+                  </div>
+                  <div class="task-item-emp">→ {{ task[9] }} ({{ task[10] }})</div>
+                </div>
+                {% if task[4] != 'Super Admin' %}
+                <button class="delete-btn" onclick="deleteTask({{ task[0] }})"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                {% else %}
+                <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">Read only</span>
+                {% endif %}
+              </div>
+              <div class="task-item-desc">{{ task[2] or 'No description.' }}</div>
+              {% if task[6] == 'declined' and task[16] %}
+              <div style="background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:8px;padding:8px 12px;margin:6px 0;font-size:12px;color:#ff4757">
+                <strong>Decline reason:</strong> {{ task[16] }}
+              </div>
+              {% endif %}
+              <div class="task-item-footer">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  {% if task[5] == 'high' %}<span class="badge badge-red">🔴 High</span>
+                  {% elif task[5] == 'medium' %}<span class="badge badge-yellow">🟡 Medium</span>
+                  {% else %}<span class="badge badge-green">🟢 Low</span>{% endif %}
+
+                  {% if task[6] == 'completed' %}<span class="badge badge-green">✓ Done</span>
+                  {% elif task[6] == 'proof_submitted' %}<span class="badge badge-orange">⏳ Proof Submitted</span>
+                  {% elif task[6] == 'in_progress' %}<span class="badge badge-blue">⟳ In Progress</span>
+                  {% elif task[6] == 'accepted' %}<span class="badge badge-cyan">✔ Accepted</span>
+                  {% elif task[6] == 'rejected' %}<span class="badge badge-red">✗ Rejected</span>
+                  {% elif task[6] == 'declined' %}<span class="badge badge-red">✗ Declined by Employee</span>
+                  {% else %}<span class="badge badge-gray">○ Pending</span>{% endif %}
+                </div>
+                <span class="task-due">{% if task[7] %}Due: {{ task[7] }}{% endif %}</span>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+          <div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>No tasks assigned yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: Review Proofs ══ -->
+  <div class="tab-content" id="tab-proofs">
+    <div class="card">
+      <div class="card-header">
+        <h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Proof Submissions</h3>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">{{ pending_proofs }} pending review</span>
+      </div>
+
+      <div class="proof-list">
+        {% set proof_tasks = all_tasks | selectattr(6, 'in', ['proof_submitted','completed','rejected']) | list %}
+        {% if proof_tasks %}
+          {% for task in proof_tasks %}
+          <div class="proof-card" id="proof-card-{{ task[0] }}">
+            <div class="proof-card-header">
+              <div>
+                <div class="proof-card-title">{{ task[1] }}</div>
+                <div class="proof-card-emp">→ {{ task[9] }}</div>
+              </div>
+              <div style="text-align:right">
+                {% if task[6] == 'proof_submitted' %}<span class="badge badge-orange">⏳ Pending Review</span>
+                {% elif task[6] == 'completed' %}<span class="badge badge-green">✅ Approved</span>
+                {% elif task[6] == 'rejected' %}<span class="badge badge-red">❌ Rejected</span>{% endif %}
+                {% if task[14] %}<div class="proof-submitted-at" style="margin-top:4px">Submitted: {{ task[14] }}</div>{% endif %}
+              </div>
+            </div>
+
+            <!-- Proof Text -->
+            {% if task[11] %}
+            <div class="proof-section">
+              <div class="proof-section-label">Description</div>
+              <div class="proof-text-content">{{ task[11] }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Proof Link -->
+            {% if task[12] %}
+            <div class="proof-section">
+              <div class="proof-section-label">Reference Link</div>
+              <div class="proof-link-content">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--accent);flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                <a href="{{ task[12] }}" target="_blank">{{ task[12] }}</a>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Proof Image -->
+            {% if task[13] %}
+            <div class="proof-section">
+              <div class="proof-section-label">Uploaded File</div>
+              <img class="proof-img" src="/static/{{ task[13] }}" alt="Proof Image">
+            </div>
+            {% endif %}
+
+            <!-- Verdict area -->
+            <div class="verdict-area">
+              {% if task[6] == 'proof_submitted' %}
+              <div style="margin-bottom:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">ADMIN REVIEW</div>
+              <textarea class="verdict-note" id="note-{{ task[0] }}" placeholder="Write feedback to employee — required for rejection, optional for approval..."></textarea>
+              <div class="verdict-btns">
+                <button class="btn-approve" onclick="submitVerdict({{ task[0] }}, 'approved')">✅ Approve</button>
+                <button class="btn-reject" onclick="submitVerdictReject({{ task[0] }})">❌ Reject with Reason</button>
+              </div>
+              {% elif task[6] == 'completed' %}
+              <div class="verdict-done approved">✅ Approved{% if task[16] %} — "{{ task[16] }}"{% endif %}</div>
+              {% elif task[6] == 'rejected' %}
+              <div class="verdict-done rejected">❌ Rejected — "{{ task[16] or 'No reason given' }}"
+                <div style="margin-top:6px;font-size:11px;opacity:0.8">Employee can resubmit proof.</div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          No proof submissions yet. Employees will appear here once they submit proof for a task.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: From Super Admin ══ -->
+  <div class="tab-content" id="tab-sa-tasks">
+    <div class="card">
+      <div class="card-header">
+        <h3><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>Tasks From Super Admin</h3>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">{{ sa_tasks|length }} task(s)</span>
+      </div>
+      <div class="proof-list">
+        {% if sa_tasks %}
+          {% for t in sa_tasks %}
+          {# 0=id,1=title,2=desc,3=assigned_to,4=assigned_by,5=priority,6=status,7=due,8=created,9=dept,10=emp_name #}
+          <div class="proof-card" id="sa-task-card-{{ t[0] }}">
+            <div class="proof-card-header">
+              <div>
+                <div class="proof-card-title" style="display:flex;align-items:center;gap:8px">
+                  {{ t[1] }}
+                  <span style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:20px;font-weight:700">★ Super Admin</span>
+                </div>
+                <div class="proof-card-emp">Dept: {{ t[9] or admin_department }}</div>
+              </div>
+              <div style="text-align:right">
+                {% if t[3] and t[10] %}
+                  <span class="badge badge-cyan">✔ Assigned to {{ t[10] }}</span>
+                {% else %}
+                  <span class="badge badge-orange">⏳ Needs Assignment</span>
+                {% endif %}
+                {% if t[5] == 'high' %}<div style="margin-top:4px"><span class="badge badge-red">🔴 High</span></div>
+                {% elif t[5] == 'medium' %}<div style="margin-top:4px"><span class="badge badge-yellow">🟡 Medium</span></div>
+                {% else %}<div style="margin-top:4px"><span class="badge badge-green">🟢 Low</span></div>{% endif %}
+              </div>
+            </div>
+
+            {% if t[2] %}
+            <div class="proof-section">
+              <div class="proof-section-label">Description</div>
+              <div class="proof-text-content">{{ t[2] }}</div>
+            </div>
+            {% endif %}
+
+            {% if t[7] %}
+            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin:8px 0 4px">Due: {{ t[7] }}</div>
+            {% endif %}
+
+            <!-- Assign to employee -->
+            <div class="verdict-area" id="sa-verdict-{{ t[0] }}">
+              {% if not t[3] %}
+              <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+                <select id="sa-emp-select-{{ t[0] }}" style="flex:1;min-width:180px;padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid #1e1e2e;border-radius:10px;color:#e2e8f0;font-family:'Space Mono',monospace;font-size:12px;outline:none">
+                  <option value="">— Assign to employee —</option>
+                  {% for emp in employees %}<option value="{{ emp[0] }}">{{ emp[1] }}</option>{% endfor %}
+                </select>
+                <button onclick="assignSaTask({{ t[0] }})" style="padding:9px 18px;background:linear-gradient(135deg,#7c3aed,#00e5ff);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">
+                  Assign Employee →
+                </button>
+              </div>
+              {% else %}
+              <div class="verdict-done approved">✔ Assigned to {{ t[10] }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          No tasks from Super Admin yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+function switchTab(tab, btn) {
+  document.querySelectorAll('.page-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function assignSaTask(taskId) {
+  const sel = document.getElementById('sa-emp-select-' + taskId);
+  const empId = sel.value;
+  const empName = sel.options[sel.selectedIndex].text;
+  if (!empId) { showToast('Please select an employee', 'error'); return; }
+  fetch('/admin/tasks/assign_sa_task', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: taskId, emp_id: empId})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      document.getElementById('sa-verdict-' + taskId).innerHTML =
+        `<div class="verdict-done approved">✔ Assigned to ${empName}</div>`;
+      showToast('✅ Task assigned to ' + empName + '!', 'success');
+    } else showToast(d.message || 'Error', 'error');
+  });
+}
+
+function assignTask() {
+  const title = document.getElementById('taskTitle').value.trim();
+  const desc = document.getElementById('taskDesc').value.trim();
+  const emp = document.getElementById('taskEmployee').value;
+  const priority = document.getElementById('taskPriority').value;
+  const due = document.getElementById('taskDue').value;
+  if (!title || !emp) { showToast('❌ Title and employee are required!', 'error'); return; }
+  fetch('/admin/tasks/add', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({title, desc, emp_id: emp, priority, due})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showToast('✅ Task assigned!', 'success');
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskDesc').value = '';
+      document.getElementById('taskEmployee').value = '';
+      document.getElementById('taskDue').value = '';
+      setTimeout(() => location.reload(), 1000);
+    }
+  });
+}
+
+function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  fetch('/admin/tasks/delete', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: id})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      document.getElementById('admin-task-' + id).remove();
+      showToast('🗑️ Task deleted', 'warn');
+    }
+  });
+}
+
+function submitVerdict(taskId, verdict) {
+  const note = document.getElementById('note-' + taskId).value.trim();
+  fetch('/admin/tasks/verdict', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({task_id: taskId, verdict, note})
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      const msg = verdict === 'approved' ? '✅ Proof approved!' : '❌ Proof rejected.';
+      showToast(msg, verdict === 'approved' ? 'success' : 'error');
+      const card = document.getElementById('proof-card-' + taskId);
+      const verdictArea = card.querySelector('.verdict-area');
+      verdictArea.innerHTML = verdict === 'approved'
+        ? `<div class="verdict-done approved">✅ Approved${note ? ' — "' + note + '"' : ''}</div>`
+        : `<div class="verdict-done rejected">❌ Rejected — "${note || 'No reason given'}"<div style="margin-top:6px;font-size:11px;opacity:0.8">Employee can resubmit proof.</div></div>`;
+    }
+  });
+}
+
+function submitVerdictReject(taskId) {
+  const note = document.getElementById('note-' + taskId).value.trim();
+  if (!note) {
+    showToast('⚠ Please write a reason before rejecting', 'error');
+    document.getElementById('note-' + taskId).focus();
+    document.getElementById('note-' + taskId).style.borderColor = '#ff4757';
+    setTimeout(() => { document.getElementById('note-' + taskId).style.borderColor = ''; }, 2000);
+    return;
+  }
+  submitVerdict(taskId, 'rejected');
+}
+
+function filterByEmp(empId, btn) {
+  document.querySelectorAll('.emp-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.task-item').forEach(item => {
+    item.style.display = (empId === 'all' || item.dataset.emp == empId) ? '' : 'none';
+  });
+}
+
+function filterBySuperAdmin(btn) {
+  document.querySelectorAll('.emp-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.task-item').forEach(item => {
+    item.style.display = (item.dataset.assignedby === 'Super Admin') ? '' : 'none';
+  });
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'success' ? 'rgba(0,229,160,0.4)' : type === 'error' ? 'rgba(255,71,87,0.4)' : 'rgba(251,191,36,0.4)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!-- 
+  ================================================================
+  SAVE AS: templates/partials/superadmin_charts.html
+  Include in superadmin_dashboard.html with:
+  {% include 'partials/superadmin_charts.html' %}
+  ================================================================
+-->
+
+<div class="sa-charts-section" style="margin-top: 2rem;">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; color:#f0f2f8; letter-spacing:2px;">
+      📊 COMPANY ANALYTICS
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button onclick="recalcAll()" style="background:transparent;border:1px solid #1a2f45;color:#9aa5b8;padding:6px 14px;border-radius:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;">
+        ↻ RECALCULATE ALL
+      </button>
+      <a href="/powerbi/export" style="background:transparent;border:1px solid #FBB040;color:#FBB040;padding:6px 14px;border-radius:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;text-decoration:none;">
+        ⬇ EXPORT CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- Top / Bottom performers -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+    <div style="background:#111; border:1px solid #00E87A33; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#00E87A; letter-spacing:2px; margin-bottom:12px;">
+        🏆 TOP PERFORMERS
+      </div>
+      <div id="top5List"></div>
+    </div>
+    <div style="background:#111; border:1px solid #FF5A7233; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#FF5A72; letter-spacing:2px; margin-bottom:12px;">
+        ⚠ NEEDS ATTENTION
+      </div>
+      <div id="bottom5List"></div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+
+    <!-- Dept Performance -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#00D4FF; letter-spacing:2px; margin-bottom:14px;">
+        DEPARTMENT PERFORMANCE
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="saDeptPerfChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Dept Attendance Today -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#00E87A; letter-spacing:2px; margin-bottom:14px;">
+        TODAY'S ATTENDANCE BY DEPT
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="saDeptAttChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Overall Trend -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#A78BFA; letter-spacing:2px; margin-bottom:14px;">
+        COMPANY ATTENDANCE TREND
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="saTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Task Status Overall -->
+    <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+      <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#FBB040; letter-spacing:2px; margin-bottom:14px;">
+        COMPANY TASK STATUS
+      </div>
+      <div style="position:relative; height:220px;">
+        <canvas id="saTaskChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- All Employees Performance Table -->
+  <div style="background:#111; border:1px solid #1a2f45; border-radius:12px; padding:20px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#9aa5b8; letter-spacing:2px; margin-bottom:14px;">
+      ALL EMPLOYEES — FULL PERFORMANCE
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid #1a2f45;">
+            <th style="text-align:left; padding:8px 12px; color:#555f70; font-size:10px; letter-spacing:1.5px;">EMPLOYEE</th>
+            <th style="text-align:left; padding:8px 12px; color:#555f70; font-size:10px;">DEPT</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">SCORE</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">PRESENT</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">LATE</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">COMPLETED</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">DECLINED</th>
+            <th style="text-align:center; padding:8px 12px; color:#555f70; font-size:10px;">GRADE</th>
+          </tr>
+        </thead>
+        <tbody id="saFullTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+  Chart.defaults.color = '#555f70';
+  Chart.defaults.borderColor = '#1a2f45';
+
+  const taskColors = {
+    'pending':'#FBB040','accepted':'#00D4FF','in_progress':'#A78BFA',
+    'proof_submitted':'#FF9500','completed':'#00E87A','declined':'#FF5A72','rejected':'#CC2244'
+  };
+
+  function gc(s) {
+    if (s>=90) return '#00E87A'; if (s>=75) return '#00D4FF';
+    if (s>=60) return '#FBB040'; if (s>=40) return '#FF9500'; return '#FF5A72';
+  }
+  function gl(s) {
+    if (s>=90) return 'A'; if (s>=75) return 'B';
+    if (s>=60) return 'C'; if (s>=40) return 'D'; return 'F';
+  }
+
+  function performerItem(emp, color) {
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #0d1520;">
+        <div style="width:36px;height:36px;border-radius:50%;background:${color}22;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;color:${color};font-size:14px;flex-shrink:0;">
+          ${emp.name[0].toUpperCase()}
+        </div>
+        <div style="flex:1;">
+          <div style="color:#f0f2f8;font-weight:600;font-size:13px;">${emp.name}</div>
+          <div style="color:#555f70;font-size:11px;">${emp.dept}</div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${color};font-size:16px;">
+          ${emp.score}
+        </div>
+      </div>`;
+  }
+
+  let charts = {};
+
+  function loadSACharts() {
+    fetch('/api/charts/superadmin')
+      .then(r => r.json())
+      .then(data => {
+        Object.values(charts).forEach(c => c.destroy());
+        charts = {};
+
+        // Top / Bottom 5
+        document.getElementById('top5List').innerHTML =
+          data.top5.map(e => performerItem(e, gc(e.score))).join('');
+        document.getElementById('bottom5List').innerHTML =
+          data.bottom5.map(e => performerItem(e, gc(e.score))).join('');
+
+        // Dept performance radar/bar
+        charts.deptPerf = new Chart(document.getElementById('saDeptPerfChart'), {
+          type: 'bar',
+          data: {
+            labels: data.dept_performance.labels,
+            datasets: [{
+              label: 'Avg Score',
+              data: data.dept_performance.scores,
+              backgroundColor: data.dept_performance.scores.map(s => gc(s)+'88'),
+              borderColor: data.dept_performance.scores.map(s => gc(s)),
+              borderWidth: 1, borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0, max: 100 } }
+          }
+        });
+
+        // Dept attendance today grouped bar
+        charts.deptAtt = new Chart(document.getElementById('saDeptAttChart'), {
+          type: 'bar',
+          data: {
+            labels: data.dept_attendance.labels,
+            datasets: [
+              {
+                label: 'Total',
+                data: data.dept_attendance.total,
+                backgroundColor: '#00D4FF33',
+                borderColor: '#00D4FF',
+                borderWidth: 1, borderRadius: 4,
+              },
+              {
+                label: 'Present',
+                data: data.dept_attendance.present,
+                backgroundColor: '#00E87A88',
+                borderColor: '#00E87A',
+                borderWidth: 1, borderRadius: 4,
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { font: { size: 10 } } } },
+          }
+        });
+
+        // Trend
+        charts.trend = new Chart(document.getElementById('saTrendChart'), {
+          type: 'line',
+          data: {
+            labels: data.trend.labels,
+            datasets: [{
+              label: 'Check-ins',
+              data: data.trend.counts,
+              borderColor: '#A78BFA',
+              backgroundColor: '#A78BFA11',
+              fill: true, tension: 0.4,
+              pointBackgroundColor: '#A78BFA', pointRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          }
+        });
+
+        // Task status
+        charts.task = new Chart(document.getElementById('saTaskChart'), {
+          type: 'doughnut',
+          data: {
+            labels: data.task_status.labels,
+            datasets: [{
+              data: data.task_status.counts,
+              backgroundColor: data.task_status.labels.map(l => taskColors[l] || '#555'),
+              borderColor: '#111', borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position:'right', labels:{font:{size:10},padding:8} } }
+          }
+        });
+
+        // Full table
+        const tbody = document.getElementById('saFullTable');
+        tbody.innerHTML = data.all_employees.map(e => `
+          <tr style="border-bottom:1px solid #0d1520;">
+            <td style="padding:9px 12px;color:#f0f2f8;font-weight:600;">${e.name}</td>
+            <td style="padding:9px 12px;color:#9aa5b8;">${e.dept}</td>
+            <td style="padding:9px 12px;text-align:center;">
+              <span style="background:${gc(e.score)}22;color:${gc(e.score)};
+                           padding:2px 10px;border-radius:6px;font-weight:700;
+                           font-family:'IBM Plex Mono',monospace;">
+                ${e.score}
+              </span>
+            </td>
+            <td style="padding:9px 12px;text-align:center;color:#00E87A;">${e.present}</td>
+            <td style="padding:9px 12px;text-align:center;color:#FBB040;">${e.late}</td>
+            <td style="padding:9px 12px;text-align:center;color:#00D4FF;">${e.completed}</td>
+            <td style="padding:9px 12px;text-align:center;color:#FF5A72;">${e.declined}</td>
+            <td style="padding:9px 12px;text-align:center;">
+              <span style="color:${gc(e.score)};font-weight:800;font-size:16px;">${gl(e.score)}</span>
+            </td>
+          </tr>`).join('');
+      })
+      .catch(e => console.error('SA chart error:', e));
+  }
+
+  window.recalcAll = function() {
+    fetch('/api/performance/recalculate', {method:'POST',headers:{'Content-Type':'application/json'}})
+    .then(r => r.json())
+    .then(d => { alert(d.message); loadSACharts(); });
+  };
+
+  loadSACharts();
+  setInterval(loadSACharts, 60000);
+})();
+</script>

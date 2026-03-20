@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Records — AttendAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --panel: #12121a; --border: #1e1e2e;
+    --accent: #00e5ff; --accent2: #7c3aed;
+    --text: #e2e8f0; --muted: #64748b;
+    --success: #00e5a0; --warn: #fbbf24; --error: #ff4757;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+    background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 24px 0; z-index: 100;
+  }
+  .sidebar-logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .logo-row { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent2), var(--accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 18px; height: 18px; color: white; }
+  .logo-text h1 { font-size: 16px; font-weight: 800; color: #fff; }
+  .logo-text p { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .nav-section { padding: 0 12px; flex: 1; }
+  .nav-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; margin-top: 16px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.15s, color 0.15s; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none; border: none; background: none; width: 100%; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(0,229,255,0.08); color: var(--accent); }
+  .nav-item.danger:hover { background: rgba(255,71,87,0.08); color: var(--error); }
+  .sidebar-footer { padding: 16px 12px 0; border-top: 1px solid var(--border); margin-top: auto; }
+  .admin-badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); border-radius: 10px; }
+  .avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent2), var(--accent)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: white; }
+  .admin-info h4 { font-size: 12px; font-weight: 700; color: #fff; }
+  .admin-info p { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--accent); }
+
+  .main { margin-left: 240px; padding: 32px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  .page-title h2 { font-size: 24px; font-weight: 800; color: #fff; }
+  .page-title p { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .topbar-actions { display: flex; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; border: none; text-decoration: none; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn-ghost { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .btn-accent { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: white; }
+  .btn-accent:hover { opacity: 0.9; box-shadow: 0 4px 20px rgba(0,229,255,0.2); }
+
+  /* Filters */
+  .filters {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-group label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .filter-group input, .filter-group select {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .filter-group input:focus, .filter-group select:focus { border-color: var(--accent); }
+
+  /* Table */
+  .table-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .table-header h3 { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .table-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
+  .record-count { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th {
+    padding: 12px 16px; text-align: left;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+    font-weight: 400; white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(30,30,46,0.5);
+    transition: background 0.15s;
+    animation: rowIn 0.3s ease both;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  td { padding: 14px 16px; font-size: 13px; vertical-align: middle; }
+
+  .cell-id { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+  .cell-name { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+  .name-avatar { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: white; flex-shrink: 0; }
+  .cell-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+  .cell-week { font-family: 'Space Mono', monospace; font-size: 11px; }
+  .week-badge { background: rgba(124,58,237,0.1); color: var(--accent2); border: 1px solid rgba(124,58,237,0.2); border-radius: 100px; padding: 2px 8px; display: inline-block; }
+  .cell-time { font-family: 'Space Mono', monospace; font-size: 12px; }
+  .time-in { color: var(--success); }
+  .time-out { color: var(--warn); }
+  .time-dash { color: var(--muted); }
+
+  .status-badge { padding: 3px 10px; border-radius: 100px; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; display: inline-block; }
+  .status-present { background: rgba(0,229,160,0.1); color: var(--success); border: 1px solid rgba(0,229,160,0.2); }
+  .status-gone { background: rgba(100,116,139,0.1); color: var(--muted); border: 1px solid var(--border); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
+  .empty-state p { font-size: 14px; }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar .logo-text, .sidebar span, .admin-info, .nav-label { display: none; }
+    .nav-item { justify-content: center; }
+    .main { margin-left: 60px; padding: 20px; }
+    .filters { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-mark">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>AttendAI</h1>
+        <p>Admin Panel</p>
+      </div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+    <a class="nav-item active" href="/attendance">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
+      <span>Attendance</span>
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="admin-badge">
+      <div class="avatar">A</div>
+      <div class="admin-info"><h4>Admin</h4><p>● ONLINE</p></div>
+    </div>
+    <a href="/logout" class="nav-item danger" style="margin-top:10px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      <span>Logout</span>
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">
+      <h2>Attendance Records</h2>
+      <p>{{ data|length }} records found</p>
+    </div>
+    <div class="topbar-actions">
+      <a href="/attendance?export=csv" class="btn btn-ghost">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Export CSV
+      </a>
+      <a href="/dashboard" class="btn btn-accent">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Search Name</label>
+      <input type="text" id="searchName" placeholder="Type name..." oninput="filterTable()">
+    </div>
+    <div class="filter-group">
+      <label>Date</label>
+      <input type="date" id="filterDate" onchange="filterTable()">
+    </div>
+    <div class="filter-group">
+      <label>Week</label>
+      <input type="number" id="filterWeek" placeholder="Week #" min="1" max="53" oninput="filterTable()">
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select id="filterStatus" onchange="filterTable()">
+        <option value="">All</option>
+        <option value="present">Present (no checkout)</option>
+        <option value="gone">Completed</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost" onclick="clearFilters()" style="margin-top:18px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      Clear
+    </button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Records
+      </h3>
+      <span class="record-count" id="recordCount">{{ data|length }} entries</span>
+    </div>
+
+    <table id="attendanceTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Employee</th>
+          <th>Date</th>
+          <th>Week</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {% for row in data %}
+        <tr data-name="{{ row[1]|lower }}" data-date="{{ row[2] }}" data-week="{{ row[3] }}" data-checkout="{{ row[5] }}">
+          <td class="cell-id">#{{ row[0] }}</td>
+          <td class="cell-name">
+            <div class="name-avatar">{{ row[1][0] }}</div>
+            {{ row[1] }}
+          </td>
+          <td class="cell-date">{{ row[2] }}</td>
+          <td class="cell-week"><span class="week-badge">W{{ row[3] }}</span></td>
+          <td class="cell-time time-in">{{ row[4] if row[4] else '—' }}</td>
+          <td class="cell-time time-out">{{ row[5] if row[5] else '<span class="time-dash">—</span>' }}</td>
+          <td>
+            {% if row[5] %}
+              <span class="status-badge status-gone">DONE</span>
+            {% else %}
+              <span class="status-badge status-present">PRESENT</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p>No attendance records found.</p>
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+function filterTable() {
+  const name = document.getElementById('searchName').value.toLowerCase();
+  const date = document.getElementById('filterDate').value;
+  const week = document.getElementById('filterWeek').value;
+  const status = document.getElementById('filterStatus').value;
+  const rows = document.querySelectorAll('#tableBody tr[data-name]');
+  let visible = 0;
+
+  rows.forEach(row => {
+    const rName = row.dataset.name || '';
+    const rDate = row.dataset.date || '';
+    const rWeek = row.dataset.week || '';
+    const rCheckout = row.dataset.checkout || '';
+    let show = true;
+    if (name && !rName.includes(name)) show = false;
+    if (date && rDate !== date) show = false;
+    if (week && rWeek !== week) show = false;
+    if (status === 'present' && rCheckout) show = false;
+    if (status === 'gone' && !rCheckout) show = false;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  document.getElementById('recordCount').textContent = `${visible} entries`;
+}
+
+function clearFilters() {
+  document.getElementById('searchName').value = '';
+  document.getElementById('filterDate').value = '';
+  document.getElementById('filterWeek').value = '';
+  document.getElementById('filterStatus').value = '';
+  filterTable();
+}
+
+
+</script>
+</body>
+</html>
