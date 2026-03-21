@@ -1,15 +1,13 @@
 from flask import Flask, render_template, Response, request, redirect, session, jsonify, make_response
 from flask_mysqldb import MySQL
 import numpy as np
-import datetime
-from datetime import timedelta
+from datetime import datetime, date, timedelta, time as dtime
 import calendar
 import csv
 import io
 import os
 import threading
 import time
-from datetime import datetime
 
 # ── CAMERA / ML IMPORTS (only on local machine with camera) ──────────────────
 try:
@@ -60,10 +58,9 @@ else:
     CAMERA_AVAILABLE = False
 
 labels = ["DIVYADHAR", "Mohith", "Uday"]
-
 DEPARTMENTS = ['Development', 'HR', 'Design', 'Operations', 'Marketing', 'Research', 'Cybersecurity']
 
-# ── CAMERA INIT (only if CV2 available) ──────────────────────────────────────
+# ── CAMERA INIT ───────────────────────────────────────────────────────────────
 camera = None
 if CAMERA_AVAILABLE:
     try:
@@ -105,17 +102,17 @@ def allowed_file(filename):
 
 def to_str(val):
     if val is None: return None
-    if isinstance(val, (datetime.date, datetime.datetime)):
+    if hasattr(val, 'strftime'):
         return val.strftime('%Y-%m-%d')
     return str(val)
 
 def do_checkin(name):
     cur = mysql.connection.cursor()
-    today = datetime.date.today()
+    today = date.today()
     week = today.isocalendar()[1]
     cur.execute("SELECT id FROM attendance WHERE name=%s AND date=%s", (name, today))
     if cur.fetchone() is None:
-        now = datetime.datetime.now().time()
+        now = datetime.now().time()
         cur.execute("INSERT INTO attendance(name, date, week, checkin) VALUES(%s,%s,%s,%s)",
                     (name, today, week, now))
         mysql.connection.commit()
@@ -126,8 +123,8 @@ def do_checkin(name):
 
 def do_checkout(name):
     cur = mysql.connection.cursor()
-    today = datetime.date.today()
-    now = datetime.datetime.now().time()
+    today = date.today()
+    now = datetime.now().time()
     cur.execute("UPDATE attendance SET checkout=%s WHERE name=%s AND date=%s", (now, name, today))
     mysql.connection.commit()
     cur.close()
@@ -245,8 +242,7 @@ def superadmin_dashboard():
     if not superadmin_required():
         return redirect('/superadmin')
     cur = mysql.connection.cursor()
-    today = datetime.date.today()
-    week = today.isocalendar()[1]
+    today = date.today()
 
     cur.execute("SELECT COUNT(*) FROM employees")
     total_employees = cur.fetchone()[0]
@@ -493,7 +489,7 @@ def api_scan_again():
 def api_stats():
     if not admin_required(): return jsonify({'error': 'unauthorized'}), 401
     cur = mysql.connection.cursor()
-    today = datetime.date.today()
+    today = date.today()
     week = today.isocalendar()[1]
     dept = get_admin_department()
     if dept:
@@ -562,7 +558,7 @@ def admin():
 def dashboard():
     if not admin_required(): return redirect('/admin')
     cur = mysql.connection.cursor()
-    today = datetime.date.today()
+    today = date.today()
     week = today.isocalendar()[1]
     dept = get_admin_department()
 
@@ -723,19 +719,15 @@ def admin_tasks():
     if dept:
         cur.execute("""
             SELECT t.id, t.title, t.description, t.assigned_to, t.assigned_by,
-                   t.priority, t.status, t.due_date, t.created_at,
-                   t.assigned_dept
-            FROM tasks t
-            WHERE t.assigned_by='Super Admin' AND t.assigned_dept=%s
+                   t.priority, t.status, t.due_date, t.created_at, t.assigned_dept
+            FROM tasks t WHERE t.assigned_by='Super Admin' AND t.assigned_dept=%s
             ORDER BY t.created_at DESC
         """, (dept,))
     else:
         cur.execute("""
             SELECT t.id, t.title, t.description, t.assigned_to, t.assigned_by,
-                   t.priority, t.status, t.due_date, t.created_at,
-                   t.assigned_dept
-            FROM tasks t
-            WHERE t.assigned_by='Super Admin'
+                   t.priority, t.status, t.due_date, t.created_at, t.assigned_dept
+            FROM tasks t WHERE t.assigned_by='Super Admin'
             ORDER BY t.created_at DESC
         """)
     sa_tasks_raw = cur.fetchall()
@@ -750,15 +742,13 @@ def admin_tasks():
         sa_tasks.append((t[0],t[1],t[2],t[3],t[4],t[5],t[6],to_str(t[7]),to_str(t[8]),t[9],emp_name))
 
     cur.close()
-
     tasks_clean = []
     for t in all_tasks:
         tasks_clean.append(list(t[:8]) + [to_str(t[8])] + list(t[9:14]) + [to_str(t[14])] + list(t[15:]))
 
     return render_template("admin_tasks.html",
         employees=employees, all_tasks=tasks_clean,
-        sa_tasks=sa_tasks,
-        pending_proofs=pending_proofs,
+        sa_tasks=sa_tasks, pending_proofs=pending_proofs,
         admin_department=dept
     )
 
@@ -864,7 +854,7 @@ def employee_portal():
     cur = mysql.connection.cursor()
     cur.execute("SELECT id, name, email, department, company_id FROM employees WHERE id=%s", (emp_id,))
     emp = cur.fetchone()
-    today = datetime.date.today()
+    today = date.today()
     today_str = today.strftime('%Y-%m-%d')
     month_start = today.replace(day=1)
     week_start = today - timedelta(days=today.weekday())
@@ -898,7 +888,7 @@ def employee_portal():
     dow_labels = ['Mo','Tu','We','Th','Fr','Sa','Su']
     calendar_days = []
     for d in range(1, num_days+1):
-        date_obj = datetime.date(year, month_num, d)
+        date_obj = date(year, month_num, d)
         date_str = date_obj.strftime('%Y-%m-%d')
         if date_str > today_str: status = 'future'
         elif date_str == today_str: status = 'today'
@@ -1017,7 +1007,7 @@ def employee_task_submit_proof():
                    proof_submitted_at=%s, status='proof_submitted', admin_verdict='pending'
                    WHERE id=%s AND assigned_to=%s""",
                 (proof_text or None, proof_link or None, proof_image_path,
-                 datetime.datetime.now(), task_id, session['employee_id']))
+                 datetime.now(), task_id, session['employee_id']))
     mysql.connection.commit()
     cur.close()
     return jsonify({'status': 'ok', 'message': '✅ Proof submitted!'})
@@ -1141,19 +1131,15 @@ def charts_employee(emp_id):
         row = cur.fetchone()
         emp_name = row[0] if row else ''
 
-    cur.execute("""
-        SELECT date, checkin, checkout
-        FROM attendance WHERE name=%s ORDER BY date DESC LIMIT 30
-    """, (emp_name,))
+    cur.execute("SELECT date, checkin, checkout FROM attendance WHERE name=%s ORDER BY date DESC LIMIT 30", (emp_name,))
     att_rows = cur.fetchall()
     att_dates = [str(r[0]) for r in reversed(att_rows)]
 
     def calc_hours(cin, cout):
         try:
             if cin and cout:
-                from datetime import datetime as dt
                 fmt = '%H:%M:%S'
-                diff = dt.strptime(str(cout), fmt) - dt.strptime(str(cin), fmt)
+                diff = datetime.strptime(str(cout), fmt) - datetime.strptime(str(cin), fmt)
                 return round(diff.seconds / 3600, 2)
         except:
             pass
@@ -1173,8 +1159,7 @@ def charts_employee(emp_id):
 
     cur.execute(
         "SELECT DATE_FORMAT(date, '%%Y-%%m') as month, COUNT(*) as days "
-        "FROM attendance WHERE name=%s "
-        "GROUP BY month ORDER BY month DESC LIMIT 6",
+        "FROM attendance WHERE name=%s GROUP BY month ORDER BY month DESC LIMIT 6",
         (emp_name,))
     monthly = cur.fetchall()
     monthly_labels = [r[0] for r in reversed(monthly)]
@@ -1188,9 +1173,8 @@ def charts_employee(emp_id):
     perf = cur.fetchone()
 
     cur.execute("""
-        SELECT action, points, reason, created_at
-        FROM performance_log WHERE employee_id=%s
-        ORDER BY created_at DESC LIMIT 10
+        SELECT action, points, reason, created_at FROM performance_log
+        WHERE employee_id=%s ORDER BY created_at DESC LIMIT 10
     """, (emp_id,))
     logs = [{'action': r[0], 'points': r[1], 'reason': r[2], 'date': str(r[3])} for r in cur.fetchall()]
 
@@ -1217,10 +1201,7 @@ def charts_employee(emp_id):
             'days_absent':     perf[7] if perf else 0,
             'log': logs,
         },
-        'tasks': {
-            'labels': [r[0] for r in task_rows],
-            'counts': [r[1] for r in task_rows],
-        }
+        'tasks': {'labels': [r[0] for r in task_rows], 'counts': [r[1] for r in task_rows]}
     })
 
 
@@ -1228,14 +1209,11 @@ def charts_employee(emp_id):
 def charts_admin():
     if 'admin' not in session:
         return jsonify({'error': 'unauthorized'}), 401
-    dept  = session.get('admin_department', None)
-    cur   = mysql.connection.cursor()
+    dept = session.get('admin_department', None)
+    cur  = mysql.connection.cursor()
 
     if dept:
-        cur.execute("""
-            SELECT employee_name, score, days_present, days_late
-            FROM performance_scores WHERE department=%s ORDER BY score DESC
-        """, (dept,))
+        cur.execute("SELECT employee_name, score, days_present, days_late FROM performance_scores WHERE department=%s ORDER BY score DESC", (dept,))
     else:
         cur.execute("SELECT employee_name, score, days_present, days_late FROM performance_scores ORDER BY score DESC")
     perf_rows = cur.fetchall()
@@ -1244,17 +1222,13 @@ def charts_admin():
         cur.execute(
             "SELECT DATE_FORMAT(a.date, '%%Y-%%m') as m, COUNT(*) FROM attendance a "
             "JOIN employees e ON e.name=a.name WHERE e.department=%s "
-            "GROUP BY m ORDER BY m DESC LIMIT 6",
-            (dept,))
+            "GROUP BY m ORDER BY m DESC LIMIT 6", (dept,))
     else:
         cur.execute("SELECT DATE_FORMAT(date, '%%Y-%%m') as m, COUNT(*) FROM attendance GROUP BY m ORDER BY m DESC LIMIT 6")
     trend = cur.fetchall()
 
     if dept:
-        cur.execute("""
-            SELECT t.status, COUNT(*) FROM tasks t JOIN employees e ON t.assigned_to=e.id
-            WHERE e.department=%s GROUP BY t.status
-        """, (dept,))
+        cur.execute("SELECT t.status, COUNT(*) FROM tasks t JOIN employees e ON t.assigned_to=e.id WHERE e.department=%s GROUP BY t.status", (dept,))
     else:
         cur.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
     task_rows = cur.fetchall()
@@ -1267,14 +1241,8 @@ def charts_admin():
             'present': [r[2] for r in perf_rows],
             'late':    [r[3] for r in perf_rows],
         },
-        'trend': {
-            'labels': [r[0] for r in reversed(trend)],
-            'counts': [r[1] for r in reversed(trend)],
-        },
-        'tasks': {
-            'labels': [r[0] for r in task_rows],
-            'counts': [r[1] for r in task_rows],
-        },
+        'trend': {'labels': [r[0] for r in reversed(trend)], 'counts': [r[1] for r in reversed(trend)]},
+        'tasks': {'labels': [r[0] for r in task_rows], 'counts': [r[1] for r in task_rows]},
         'today_count': 0,
         'dept_attendance': {'labels': [], 'rates': []}
     })
@@ -1285,7 +1253,7 @@ def charts_superadmin():
     if 'superadmin' not in session:
         return jsonify({'error': 'unauthorized'}), 401
     cur   = mysql.connection.cursor()
-    today = datetime.date.today()
+    today = date.today()
 
     cur.execute("SELECT employee_name, department, score, days_present, days_late, tasks_completed, tasks_declined, proofs_rejected FROM performance_scores ORDER BY score DESC")
     all_perf = cur.fetchall()
@@ -1342,9 +1310,7 @@ def powerbi_export():
         return "Unauthorized", 401
     cur = mysql.connection.cursor()
     cur.execute("""
-        SELECT a.name, a.date, a.checkin, a.checkout,
-               e.department,
-               COALESCE(p.score, 100)
+        SELECT a.name, a.date, a.checkin, a.checkout, e.department, COALESCE(p.score, 100)
         FROM attendance a
         LEFT JOIN employees e ON e.name=a.name
         LEFT JOIN performance_scores p ON p.employee_id=e.id
